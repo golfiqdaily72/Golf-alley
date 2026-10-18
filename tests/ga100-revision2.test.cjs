@@ -216,7 +216,7 @@ test('GA-108 scorecard matches actual putts, par and golf outcomes', () => {
 });
 
 test('GA-108 celebration is hidden during play, appears only after valid cup capture', () => {
-  const { hooks:t,elements,timers }=makeApp();
+  const { hooks:t,elements,timers,handlers }=makeApp();
   assert.equal(elements.holeResult?.hidden,true,'hidden by default on loading the game');
   const cup=t.getCup();
   // Near miss is never an earned score.
@@ -226,19 +226,25 @@ test('GA-108 celebration is hidden during play, appears only after valid cup cap
   assert.equal(elements.holeResult.hidden,true);
   assert.equal(timers.size,1,'only bank tutorial timeout exists before hole out');
   // Force authentic cup capture via the same physics code path.
-  t.reset();t.setBall(cup.x+.03,cup.z+.03,.2,.25);
+  t.reset();
+  const e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+  handlers['course:pointerdown'](e(195,350));
+  handlers['course:pointermove'](e(195,450));
+  handlers['course:pointerup'](e(195,450));
+  assert.equal(t.getState().shots,1);
+  t.setBall(cup.x+.03,cup.z+.03,.2,.25);
   t.advance(1);
   assert.equal(t.getState().holed,true);
   assert.equal(t.getRenderBallVisible(),false);
   assert.equal(elements.holeResult.hidden,true,'popup waits briefly for ball to disappear');
-  assert.equal(timers.size,2,'completion timer and startup tip timeout');
+  assert.equal(timers.size,1,'completion timer after initial tip is dismissed on first shot');
   const resultTimer=[...timers.values()].find(x=>x.ms===420);
   assert.ok(resultTimer);
   resultTimer.fn();
   assert.equal(elements.holeResult.hidden,false,'shown after successful hole');
   assert.equal(elements.resultName.textContent,'EAGLE');
   assert.equal(elements.resultRelative.textContent,'-2');
-  assert.equal(elements.resultPutts.textContent,0,'test hook physics can sink without counting a player stroke');
+  assert.equal(elements.resultPutts.textContent,1,'one putt is recognized');
 });
 
 test('GA-108 scorecard supports dismiss, replay and Escape', () => {
