@@ -40,6 +40,21 @@
 .result-actions button.primary{background:var(--lime);border-color:var(--lime);color:#17311f}
 @media(max-width:400px){.hole-result{padding:12px}.hole-result-card{padding:18px 15px}.result-emblem{margin-top:12px}.result-description{margin-bottom:13px}}
 @media(prefers-reduced-motion:no-preference){.hole-result:not([hidden]) .hole-result-card{animation:score-arrival .25s ease-out both}@keyframes score-arrival{from{transform:translateY(13px) scale(.97);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}}
+
+/* GA-109: smaller score feedback leaves the majority of the green visible. */
+.hole-result{background:rgba(3,24,18,.24);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);padding:12px}
+.hole-result-card{width:min(100%,260px);max-height:90%;padding:14px 14px 13px;border-radius:15px;box-shadow:0 11px 30px rgba(0,0,0,.35)}
+.result-kicker{font-size:8px;letter-spacing:1.3px}
+.result-emblem{width:32px;height:32px;font-size:20px;margin:7px auto 4px;border-width:1.5px}
+.result-title{font-size:21px;margin-top:5px;letter-spacing:-.6px}
+.result-name{font-size:13px;letter-spacing:1.9px;margin-top:4px}
+.result-description{font-size:10px;margin:5px 0 10px;line-height:1.35}
+.result-scores{padding:8px 4px;gap:4px;border-radius:9px}
+.result-scores span{font-size:8px;margin-bottom:4px;letter-spacing:.85px}
+.result-scores strong{font-size:21px}
+.result-actions{flex-direction:row;gap:7px;margin-top:10px}
+.result-actions button{flex:1;min-width:0;min-height:38px;padding:8px 5px;font-size:9px;letter-spacing:.35px;border-radius:8px}
+@media(max-width:400px){.hole-result-card{padding:12px 12px 11px}.result-emblem{margin-top:5px}.result-description{margin-bottom:8px}}
 </style>
 </head>
 <body>
@@ -65,7 +80,7 @@
   </div>
  </div>
 </div></div><div class="under"><div class="status" id="status" aria-live="polite">READY TO ROLL</div><div class="power-area">POWER <div class="power-track" role="progressbar" aria-label="Putt power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="powerMeter"><div class="power-fill" id="powerFill"></div></div></div></div></section>
-<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A warm sandstone edge and on-course marker show where an optional rebound can help.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull opposite your intended shot direction to aim anywhere; then release.</div></aside></div>
+<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A naturally finished sandstone bank offers an optional rebound route, introduced by a brief start-of-hole tip.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull opposite your intended shot direction to aim anywhere; then release.</div></aside></div>
 <footer><span><strong>GOLF ALLEY</strong> · THE GREEN EXPERIENCE</span><span>GA-100 / V0.2 · PRODUCT REVIEW BUILD</span></footer>
 </div>
 <script>
