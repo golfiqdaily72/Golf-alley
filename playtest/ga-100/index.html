@@ -200,7 +200,7 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>2.26+6.95*power,
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>2.26+6.95*power,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
  setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
