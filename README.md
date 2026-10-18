@@ -1,4 +1,4 @@
-# Golf Alley — Roll It Smooth
+# Golf Alley — Roll It.
 
 A mobile-first browser putting game. **The Founders Nine** is the initial playable nine-hole course.
 
