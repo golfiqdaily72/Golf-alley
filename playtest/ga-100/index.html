@@ -32,24 +32,30 @@ const canvas=document.querySelector('#course'),screenCtx=canvas.getContext('2d',
 const scenery=document.createElement('canvas'),sceneryCtx=scenery.getContext('2d',{alpha:false});let ctx=screenCtx;
 const $=id=>document.getElementById(id), RADIUS=.15, FINAL_Z=17.15;
 let W=400,H=580,dpr=1,lastTime=0,acc=0,shots=0,aim=null,moving=false,holed=false,trailed=[],ball={x:0,z:1.55,vx:0,vz:0},messageUntil=0,announce='',center={x:0,y:0,z:7.5},cam={x:0,y:5.85,z:-8.3},basis=null;
- let shotViewDistance=9.85,lastSceneryAt=0,sceneryDirty=true,hasTakenShot=false,bankFlashUntil=0;
+ let shotViewDistance=9.85,lastSceneryAt=0,sceneryDirty=true,hasTakenShot=false,bankFlashUntil=0,cameraYaw=0,shotYaw=0,bankTipTimer=null;
  // Camera tracks a moving putt without zooming. Once it rests, the next-shot
  // view tightens automatically according to remaining distance to the cup.
+ // Orient every settled next-shot view toward the cup, including overshoots.
+ // Orbit around the ball rather than passing through it when turning 180 degrees.
  function cameraGoal(){
-   const remaining=Math.hypot(cup.x-ball.x,cup.z-ball.z);
+   const dx=cup.x-ball.x,dz=cup.z-ball.z,remaining=Math.hypot(dx,dz);
+   const yaw=moving?shotYaw:Math.atan2(dx,dz);
    const behind=moving?clamp(shotViewDistance,3.6,9.85):clamp(2.75+remaining*.23,3.10,6.35);
    const lead=moving?clamp(remaining*.5,2.5,7.4):clamp(remaining*.56,1.55,6.7);
-   const focusZ=clamp(ball.z+lead,ball.z+1.1,21);
-   const fx=ball.x+(cup.x-ball.x)*clamp(lead/Math.max(1,remaining),0,1)*.48;
-   return {cam:{x:ball.x,y:height(ball.x,ball.z)+3.0+behind*.20,z:ball.z-behind},
-           center:{x:fx,y:height(fx,focusZ)+.28,z:focusZ}};
+   return {yaw,behind,lead};
  }
  function updateCamera(dt){
-   if(!hasTakenShot)return false;
+   if(!hasTakenShot||aim)return false; // Lock framing throughout any drag.
    const target=cameraGoal(),a=1-Math.exp(-dt*(moving?3.25:7.8));
-   let delta=0;
+   const deltaYaw=Math.atan2(Math.sin(target.yaw-cameraYaw),Math.cos(target.yaw-cameraYaw));
+   cameraYaw+=deltaYaw*a;
+   const fx=Math.sin(cameraYaw),fz=Math.cos(cameraYaw);
+   const lx=ball.x+fx*target.lead,lz=ball.z+fz*target.lead;
+   const nextCam={x:ball.x-fx*target.behind,y:height(ball.x,ball.z)+3+target.behind*.2,z:ball.z-fz*target.behind};
+   const nextCenter={x:lx,y:height(lx,lz)+.28,z:lz};
+   let delta=Math.abs(deltaYaw);
    for(const k of ['x','y','z']){
-     const dc=target.cam[k]-cam[k],df=target.center[k]-center[k];
+     const dc=nextCam[k]-cam[k],df=nextCenter[k]-center[k];
      cam[k]+=dc*a;center[k]+=df*a;delta+=Math.abs(dc)+Math.abs(df);
    }
    if(delta>.003)sceneryDirty=true;
@@ -170,9 +176,17 @@ function sky(){
 function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();renderBankHint();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
 function render(){screenCtx.drawImage(scenery,0,0,W,H);renderBall();renderAim()}
 function aimStrength(){if(!aim)return 0;return clamp(Math.hypot(aim.dx,aim.dy)/150,0,1)}
-function getAim(){if(!aim||aim.dy<5||Math.hypot(aim.dx,aim.dy)<15)return null;const angle=clamp(Math.atan2(-aim.dx,Math.max(15,aim.dy)),-.92,.92),power=aimStrength(),speed=2.26+6.95*power;return {vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,power}}
+function getAim(){
+ const length=aim?Math.hypot(aim.dx,aim.dy):0;
+ if(length<15)return null; // All drag directions, including full reverse, accepted.
+ const rx=basis.r.x,rz=basis.r.z,fx=basis.f.x,fz=basis.f.z;
+ const rm=Math.hypot(rx,rz)||1,fm=Math.hypot(fx,fz)||1;
+ const sx=-aim.dx*rx/rm+aim.dy*fx/fm,sz=-aim.dx*rz/rm+aim.dy*fz/fm;
+ const m=Math.hypot(sx,sz)||1,power=aimStrength(),speed=2.26+6.95*power;
+ return {vx:sx/m*speed,vz:sz/m*speed,power};
+}
 function updateUI(){const p=getAim();$('powerFill').style.width=`${Math.round(p?p.power*100:0)}%`;$('powerMeter').setAttribute('aria-valuenow',Math.round(p?p.power*100:0));$('strokes').textContent=shots;$('status').textContent=holed?'HOLED — NICE ROLL':moving?'BALL IN MOTION':aim?'AIM · RELEASE TO PUTT':'READY TO ROLL';$('status').classList.toggle('holed',holed);$('tip').classList.toggle('off',Boolean(aim)||moving||holed)}
-function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;setCamera();renderScenery();updateUI()}
+function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;cameraYaw=shotYaw=0;setCamera();renderScenery();updateUI()}
 function physics(dt){if(!moving||holed)return;const g=gradient(ball.x,ball.z);const sp=Math.hypot(ball.vx,ball.vz);if(sp<.18){moving=false;ball.vx=ball.vz=0;updateUI();return}
 // Gravity projected onto the local green tangent + near-constant rolling resistance.
 const accX=-3.25*g.x-1.59*ball.vx/sp,accZ=-3.25*g.z-1.59*ball.vz/sp;
@@ -187,7 +201,7 @@ const dc=Math.hypot(ball.x-cup.x,ball.z-cup.z),newSpeed=Math.hypot(ball.vx,ball.
 if(dc<.23&&newSpeed<3.4){holed=true;moving=false;ball.x=cup.x;ball.z=cup.z;ball.vx=ball.vz=0;announce='NICE ROLL';$('tip').textContent='HOLED IN '+shots+(shots===1?' PUTT':' PUTTS');$('tip').classList.remove('off');updateUI();return}
 if(trailed.length===0||Math.hypot(trailed.at(-1).x-ball.x,trailed.at(-1).z-ball.z)>.20){trailed.push({x:ball.x,z:ball.z});if(trailed.length>80)trailed.shift()}
 }
-function shoot(){const shot=getAim();aim=null;if(!shot){updateUI();return}ball.vx=shot.vx;ball.vz=shot.vz;shots++;shotViewDistance=clamp(ball.z-cam.z,3.6,9.85);hasTakenShot=true;moving=true;trailed=[];updateUI()}
+function shoot(){const shot=getAim();aim=null;if(!shot){updateUI();return}ball.vx=shot.vx;ball.vz=shot.vz;shots++;shotViewDistance=clamp(Math.hypot(ball.x-cam.x,ball.z-cam.z),3.6,9.85);shotYaw=cameraYaw;hasTakenShot=true;moving=true;trailed=[];updateUI()}
 function locate(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 canvas.addEventListener('pointerdown',e=>{if(moving||holed)return;const p=locate(e);aim={startX:p.x,startY:p.y,dx:0,dy:0,id:e.pointerId};canvas.setPointerCapture(e.pointerId);updateUI()});
 canvas.addEventListener('pointermove',e=>{if(!aim||aim.id!==e.pointerId)return;const p=locate(e);aim.dx=p.x-aim.startX;aim.dy=p.y-aim.startY;updateUI()});
@@ -200,8 +214,8 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>2.26+6.95*power,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
- setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true},
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
+ setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true;shotYaw=cameraYaw},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
 reset();resize();window.addEventListener('resize',resize);if('ResizeObserver' in window)new ResizeObserver(resize).observe(canvas);requestAnimationFrame(animate);
