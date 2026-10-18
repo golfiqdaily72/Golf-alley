@@ -106,7 +106,13 @@ let W=400,H=580,dpr=1,lastTime=0,acc=0,shots=0,aim=null,moving=false,holed=false
  }
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const middle=z=>.48*Math.sin(z*.26+.5)-.28*Math.sin(z*.57);
-const width=z=>2.33+.16*Math.sin(z*.52)+.10*(z/18);
+// The playable green ends in an organic, rounded cap BEHIND the flagstick.
+// Fringe follows precisely the same terminus rather than projecting forever.
+const GREEN_SHOULDER=17.62,GREEN_END=18.90,FRINGE_END=GREEN_END;
+const endTaper=z=>{const t=clamp((z-GREEN_SHOULDER)/(GREEN_END-GREEN_SHOULDER),0,1);return Math.sqrt(Math.max(0,1-t*t))};
+const baseWidth=z=>2.33+.16*Math.sin(z*.52)+.10*(z/18);
+const width=z=>baseWidth(z)*endTaper(z);
+const outerWidth=z=>(baseWidth(z)+.66)*endTaper(z);
 // One continuous 3D heightfield governs rendering AND ball acceleration.
 function height(x,z){return .20*Math.sin(z*.34+.25)+.19*Math.sin(.76*x+.18*z)+.057*x*Math.sin(z*.42)-.020*(z-8)+.025*Math.sin(x*1.33+z*.46)}
 function gradient(x,z){const h=.018;return {x:(height(x+h,z)-height(x-h,z))/(2*h),z:(height(x,z+h)-height(x,z-h))/(2*h)}}
@@ -122,22 +128,58 @@ function path(points,fill,stroke=null,line=1){ctx.beginPath();let did=false;for(
 function shade(color,delta){let rgb=color.map(c=>clamp(Math.round(c*delta),0,255));return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`}
 function rand(x){return (Math.sin(x*112.17+42.5)*43758.5453)%1}
 function polygonRough(z0,z1,x0,x1,bright){const terrainY=(x,z)=>height(x,z)-.21-.05*Math.abs(x-middle(z));const pts=[project(x0,terrainY(x0,z0),z0),project(x1,terrainY(x1,z0),z0),project(x1,terrainY(x1,z1),z1),project(x0,terrainY(x0,z1),z1)];path(pts,bright?'#3c6a40':'#38613d')}
-function renderGround(){for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;polygonRough(z0,z1,-19,19,i%7<3)}
-for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;for(let side of [-1,1]){const xa=z=>middle(z)+side*(width(z)+.05);const xb=z=>middle(z)+side*(width(z)+.73);
-path([P(xa(z0),z0,-.11),P(xb(z0),z0,-.25),P(xb(z1),z1,-.25),P(xa(z1),z1,-.11)],i%3===0?'#6a8550':'#5c7a47');}}
+function renderGround(){
+ // Broad rough continues to the horizon, but the manicured fringe MUST end
+ // with the green. Never draw disconnected strips above the end of the hole.
+ for(let ii=0;ii<=55;ii++){
+   const i=Math.cos(cameraYaw)<0?ii:55-ii,z0=i*.60,z1=z0+.6;
+   polygonRough(z0,z1,-19,19,i%7<3);
+ }
+ const segments=64,step=FRINGE_END/segments;
+ for(let ii=0;ii<segments;ii++){
+   const i=Math.cos(cameraYaw)<0?ii:segments-1-ii;
+   const z0=i*step,z1=Math.min(FRINGE_END,(i+1)*step);
+   for(const side of [-1,1]){
+     const inside=(z)=>middle(z)+side*width(z),outside=(z)=>middle(z)+side*outerWidth(z);
+     path([
+       P(inside(z0),z0,-.105),P(outside(z0),z0,-.19),
+       P(outside(z1),z1,-.19),P(inside(z1),z1,-.105)
+     ],i%8<4?'#728956':'#667e4c');
+   }
+ }
 }
-function drawGreen(){const nz=75,nx=24;
-for(let ii=0;ii<nz;ii++){const i=Math.cos(cameraYaw)<0?ii:nz-1-ii;const z0=.05+i*(18.7/nz),z1=.05+(i+1)*(18.7/nz);for(let j=0;j<nx;j++){
+function drawGreen(){const nz=80,nx=26;
+for(let ii=0;ii<nz;ii++){const i=Math.cos(cameraYaw)<0?ii:nz-1-ii;const z0=.05+i*((GREEN_END-.05)/nz),z1=.05+(i+1)*((GREEN_END-.05)/nz);for(let j=0;j<nx;j++){
 const u0=-1+2*j/nx,u1=-1+2*(j+1)/nx;
 const x=(z,u)=>middle(z)+u*width(z),a=P(x(z0,u0),z0,.025),b=P(x(z0,u1),z0,.025),c=P(x(z1,u1),z1,.025),d=P(x(z1,u0),z1,.025);
-const zm=(z0+z1)/2,xm=x(zm,(u0+u1)*.5),slope=gradient(xm,zm),l=1.02-.47*slope.x-.68*slope.z + (i%12<6?.045:-.025);
-const base=[78,150,86],line=shade(base,clamp(l,.76,1.22));path([a,b,c,d],line);
+const zm=(z0+z1)/2,xm=x(zm,(u0+u1)*.5),slope=gradient(xm,zm),l=1.02-.47*slope.x-.68*slope.z + (i%15<7?.020:-.012);
+const base=[87,152,89],line=shade(base,clamp(l,.82,1.15));path([a,b,c,d],line);
 }}
 // Border and mow lines are projected from the same playable 3D surface.
-for(let side of [-1,1]){ctx.beginPath();for(let i=0;i<=100;i++){const z=.07+i*18.65/100,q=P(middle(z)+side*(width(z)-.035),z,.04);if(!q)continue;if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=2.1;ctx.strokeStyle='#c5e5a0a0';ctx.stroke()}
-for(let i=1;i<7;i++){ctx.beginPath();for(let j=0;j<=78;j++){let z=.1+j*18.5/78, u=-1+2*i/7,x=middle(z)+u*width(z);const q=P(x,z,.036);if(!q)continue;if(j===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=.65;ctx.strokeStyle='#cbf5a816';ctx.stroke()}
+for(let side of [-1,1]){ctx.beginPath();for(let i=0;i<=100;i++){const z=.07+i*(GREEN_END-.07)/100,q=P(middle(z)+side*Math.max(0,width(z)-.032),z,.044);if(!q)continue;if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=2.7;ctx.strokeStyle='#d7ec9fc9';ctx.stroke()}
+for(let i=1;i<7;i++){ctx.beginPath();for(let j=0;j<=78;j++){let z=.1+j*(GREEN_END-.14)/78, u=-1+2*i/7,x=middle(z)+u*width(z);const q=P(x,z,.036);if(!q)continue;if(j===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=.65;ctx.strokeStyle='#cbf5a816';ctx.stroke()}
 }
-function contourLines(){const minZ=.2,maxZ=18.6,dz=.58,du=.075;ctx.lineWidth=.84;ctx.strokeStyle='rgba(217,248,169,.23)';
+function renderFinishRim(){
+ // Distinct trailing rim of short rough around the back of the putting green.
+ const divisions=48,points=[];
+ for(let j=0;j<=divisions;j++){
+   const z=GREEN_SHOULDER+(GREEN_END-GREEN_SHOULDER)*j/divisions;
+   points.push(P(middle(z)-outerWidth(z),z,-.12));
+ }
+ for(let j=divisions;j>=0;j--){
+   const z=GREEN_SHOULDER+(GREEN_END-GREEN_SHOULDER)*j/divisions;
+   points.push(P(middle(z)+outerWidth(z),z,-.12));
+ }
+ // A border highlight, not a filled slab across the course.
+ ctx.beginPath();
+ let begun=false;
+ for(const p of points){
+   if(!p)continue;
+   if(!begun){ctx.moveTo(p.x,p.y);begun=true}else ctx.lineTo(p.x,p.y);
+ }
+ if(begun){ctx.strokeStyle='rgba(188,207,125,.42)';ctx.lineWidth=1.5;ctx.stroke();}
+}
+function contourLines(){const minZ=.2,maxZ=GREEN_END-.2,dz=.58,du=.075;ctx.lineWidth=.84;ctx.strokeStyle='rgba(217,248,169,.23)';
 // Marching squares across the actual green heightfield, at 0.12 m increments.
 for(let z=minZ;z<maxZ;z+=dz){for(let u=-.98;u<.96;u+=du){const sample=(uu,zz)=>{const x=middle(zz)+uu*width(zz);return {x,z:zz,y:height(x,zz)}};const pts=[sample(u,z),sample(u+du,z),sample(u+du,z+dz),sample(u,z+dz)];let low=Math.min(...pts.map(p=>p.y)),high=Math.max(...pts.map(p=>p.y));let a=Math.ceil(low/.13),b=Math.floor(high/.13);for(let k=a;k<=b;k++){const target=k*.13,crossings=[];for(let e=0;e<4;e++){const p=pts[e],q=pts[(e+1)%4];if((p.y<=target)!=(q.y<=target)){const t=(target-p.y)/(q.y-p.y),x=p.x+(q.x-p.x)*t,zz=p.z+(q.z-p.z)*t;crossings.push(project(x,target+.055,zz))}}
 for(let c=0;c+1<crossings.length;c+=2){const p=crossings[c],q=crossings[c+1];if(p&&q){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}}}
@@ -203,7 +245,7 @@ function sky(){
  path([{x:0,y:H*.47},{x:W*.14,y:H*.395},{x:W*.32,y:H*.43},{x:W*.48,y:H*.36},{x:W*.64,y:H*.425},{x:W*.82,y:H*.37},{x:W,y:H*.435},{x:W,y:H*.64},{x:0,y:H*.64}],'rgba(54,112,87,.58)');
  ctx.restore();
 }
-function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
+function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();renderFinishRim();contourLines();renderStoneBank();renderRock();renderCup();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
 function render(){screenCtx.drawImage(scenery,0,0,W,H);renderBall();renderAim()}
 function aimStrength(){if(!aim)return 0;return clamp(Math.hypot(aim.dx,aim.dy)/150,0,1)}
 function getAim(){
@@ -280,7 +322,7 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getHoleScore:(putts,par=3)=>holeScore(putts,par),showHoleResult,hideHoleResult,getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getWidth:(z)=>width(z),getOuterWidth:(z)=>outerWidth(z),getGreenEnd:()=>GREEN_END,getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getHoleScore:(putts,par=3)=>holeScore(putts,par),showHoleResult,hideHoleResult,getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
  setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true;shotYaw=cameraYaw},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
