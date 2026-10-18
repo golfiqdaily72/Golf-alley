@@ -196,3 +196,74 @@ test('banking tip is outside green, dismissible, and automatically times out', (
   assert.equal(again.elements.bankIntro.hidden,true);
   assert.equal(again.timers.size,0);
 });
+
+
+test('GA-108 scorecard matches actual putts, par and golf outcomes', () => {
+  const { hooks:t }=makeApp();
+  const expected=[
+    [1,'EAGLE','-2'],[2,'BIRDIE','-1'],[3,'PAR','E'],
+    [4,'BOGEY','+1'],[5,'DOUBLE BOGEY','+2'],[6,'TRIPLE BOGEY','+3'],
+    [7,'4 OVER PAR','+4']
+  ];
+  for(const [putts,name,relative] of expected){
+    const score=t.getHoleScore(putts,3);
+    assert.equal(score.name,name,'name for '+putts);
+    assert.equal(score.relative,relative,'to par for '+putts);
+    assert.equal(score.putts,putts);
+    assert.equal(score.par,3);
+    assert.equal(score.ace,putts===1);
+  }
+});
+
+test('GA-108 celebration is hidden during play, appears only after valid cup capture', () => {
+  const { hooks:t,elements,timers }=makeApp();
+  assert.equal(elements.holeResult?.hidden,true,'hidden by default on loading the game');
+  const cup=t.getCup();
+  // Near miss is never an earned score.
+  t.setBall(cup.x+.62,cup.z+.50,.2,.2);
+  t.advance(.3);
+  assert.notEqual(t.getState().holed,true);
+  assert.equal(elements.holeResult.hidden,true);
+  assert.equal(timers.size,1,'only bank tutorial timeout exists before hole out');
+  // Force authentic cup capture via the same physics code path.
+  t.reset();t.setBall(cup.x+.03,cup.z+.03,.2,.25);
+  t.advance(1);
+  assert.equal(t.getState().holed,true);
+  assert.equal(t.getRenderBallVisible(),false);
+  assert.equal(elements.holeResult.hidden,true,'popup waits briefly for ball to disappear');
+  assert.equal(timers.size,2,'completion timer and startup tip timeout');
+  const resultTimer=[...timers.values()].find(x=>x.ms===420);
+  assert.ok(resultTimer);
+  resultTimer.fn();
+  assert.equal(elements.holeResult.hidden,false,'shown after successful hole');
+  assert.equal(elements.resultName.textContent,'EAGLE');
+  assert.equal(elements.resultRelative.textContent,'-2');
+  assert.equal(elements.resultPutts.textContent,0,'test hook physics can sink without counting a player stroke');
+});
+
+test('GA-108 scorecard supports dismiss, replay and Escape', () => {
+  const { hooks:t,elements,handlers,timers }=makeApp();
+  const cup=t.getCup();
+  const hole=()=>{ t.setBall(cup.x+.03,cup.z+.03,.2,.25);t.advance(1);t.showHoleResult();};
+  hole();
+  assert.equal(elements.holeResult.hidden,false);
+  handlers['resultDismiss:click']();
+  assert.equal(elements.holeResult.hidden,true,'View Green dismisses');
+  t.reset();hole();
+  handlers['resultReplay:click']();
+  assert.equal(t.getState().shots,0,'Replay restores stroke count');
+  assert.equal(t.getState().holed,false,'Replay restores playable hole');
+  assert.equal(elements.holeResult.hidden,true,'Replay hides popup');
+});
+
+test('GA-108 reset cancels pending celebration timer', () => {
+  const { hooks:t,elements,timers }=makeApp();
+  const cup=t.getCup();
+  t.setBall(cup.x+.03,cup.z+.03,.2,.25);t.advance(1);
+  assert.ok([...timers.values()].some(x=>x.ms===420));
+  t.reset();
+  assert.equal(elements.holeResult.hidden,true);
+  assert.ok(![...timers.values()].some(x=>x.ms===420));
+  t.showHoleResult();
+  assert.equal(elements.holeResult.hidden,true,'No delayed ghost popup after reset');
+});
