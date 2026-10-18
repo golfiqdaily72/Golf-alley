@@ -20,10 +20,10 @@
 </head>
 <body>
 <div class="shell">
-<header class="top"><div class="identity"><div class="brandmark" aria-hidden="true">↗</div><div><strong>GOLF <span>ALLEY</span></strong><small>ROLL IT SMOOTH</small></div></div><span class="buildtag">GA-100 · DESIGN PREVIEW</span></header>
-<section class="intro"><div><div class="eyebrow">THE GREEN EXPERIENCE / V0.2</div><h1>See the slope.<br><em>Feel the break.</em></h1><p>One longer, dimensional putting hole. Natural contours, genuine elevation physics, and a bank-shot route — all playable on your phone.</p></div><div class="stage-note">FIRST LOOK<strong>ONE-HOLE VERTICAL SLICE</strong>YOUR REVIEW BEFORE NINE</div></section>
+<header class="top"><div class="identity"><div class="brandmark" aria-hidden="true">↗</div><div><strong>GOLF <span>ALLEY</span></strong><small>ROLL IT SMOOTH</small></div></div><span class="buildtag">GA-100 · REVISION 2</span></header>
+<section class="intro"><div><div class="eyebrow">THE GREEN EXPERIENCE / V0.2</div><h1>See the slope.<br><em>Feel the break.</em></h1><p>Premium green contours, a clearer stone bank, quicker rolls and an automatic next-shot camera — all playable on your phone.</p></div><div class="stage-note">FIRST LOOK<strong>ONE-HOLE VERTICAL SLICE</strong>YOUR REVIEW BEFORE NINE</div></section>
 <div class="layout"><section class="game" aria-label="GA-100 putting preview"><div class="hud"><div class="stat"><div class="stat-label">HOLE 01 · CONCEPT</div><div class="stat-val name">The Bend</div></div><div class="stat"><div class="stat-label">PAR</div><div class="stat-val">3</div></div><div class="stat"><div class="stat-label">PUTTS</div><div class="stat-val" id="strokes">0</div></div></div><div class="course-wrap"><canvas id="course" role="img" aria-label="Interactive projected 3D golf putting corridor. Pull backward on the course, then release to putt. Touch and mouse supported."></canvas><div class="course-stamp">THE FOUNDERS NINE / STUDY 01</div><div class="course-stamp right">3D GREEN · GA-100</div><div class="tip" id="tip">PULL BACK &amp; RELEASE TO PUTT</div></div><div class="under"><div class="status" id="status" aria-live="polite">READY TO ROLL</div><div class="power-area">POWER <div class="power-track" role="progressbar" aria-label="Putt power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="powerMeter"><div class="power-fill" id="powerFill"></div></div></div></div></section>
-<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, choose your line, and decide whether the left-side stone bank is worth playing.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>Play around the natural rock or use the left stone edge to redirect your putt.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>This is the first-hole experiment for GA-101 through GA-106. The live nine-hole build stays unchanged until your playtest approval.</div></div><div class="footnote">Designed as a dependency-free, mobile-first 3D geometry preview. Pull down on the green to shoot up the hole; drag diagonally to adjust your line.</div></aside></div>
+<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A warm sandstone edge and on-course marker show where an optional rebound can help.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull down to putt; drag diagonally to aim.</div></aside></div>
 <footer><span><strong>GOLF ALLEY</strong> · THE GREEN EXPERIENCE</span><span>GA-100 / V0.2 · PRODUCT REVIEW BUILD</span></footer>
 </div>
 <script>
@@ -32,6 +32,30 @@ const canvas=document.querySelector('#course'),screenCtx=canvas.getContext('2d',
 const scenery=document.createElement('canvas'),sceneryCtx=scenery.getContext('2d',{alpha:false});let ctx=screenCtx;
 const $=id=>document.getElementById(id), RADIUS=.15, FINAL_Z=17.15;
 let W=400,H=580,dpr=1,lastTime=0,acc=0,shots=0,aim=null,moving=false,holed=false,trailed=[],ball={x:0,z:1.55,vx:0,vz:0},messageUntil=0,announce='',center={x:0,y:0,z:7.5},cam={x:0,y:5.85,z:-8.3},basis=null;
+ let shotViewDistance=9.85,lastSceneryAt=0,sceneryDirty=true,hasTakenShot=false,bankFlashUntil=0;
+ // Camera tracks a moving putt without zooming. Once it rests, the next-shot
+ // view tightens automatically according to remaining distance to the cup.
+ function cameraGoal(){
+   const remaining=Math.hypot(cup.x-ball.x,cup.z-ball.z);
+   const behind=moving?clamp(shotViewDistance,3.6,9.85):clamp(2.75+remaining*.23,3.10,6.35);
+   const lead=moving?clamp(remaining*.5,2.5,7.4):clamp(remaining*.56,1.55,6.7);
+   const focusZ=clamp(ball.z+lead,ball.z+1.1,21);
+   const fx=ball.x+(cup.x-ball.x)*clamp(lead/Math.max(1,remaining),0,1)*.48;
+   return {cam:{x:ball.x,y:height(ball.x,ball.z)+3.0+behind*.20,z:ball.z-behind},
+           center:{x:fx,y:height(fx,focusZ)+.28,z:focusZ}};
+ }
+ function updateCamera(dt){
+   if(!hasTakenShot)return false;
+   const target=cameraGoal(),a=1-Math.exp(-dt*(moving?3.25:7.8));
+   let delta=0;
+   for(const k of ['x','y','z']){
+     const dc=target.cam[k]-cam[k],df=target.center[k]-center[k];
+     cam[k]+=dc*a;center[k]+=df*a;delta+=Math.abs(dc)+Math.abs(df);
+   }
+   if(delta>.003)sceneryDirty=true;
+   setCamera();
+   return delta>.003;
+ }
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const middle=z=>.48*Math.sin(z*.26+.5)-.28*Math.sin(z*.57);
 const width=z=>2.33+.16*Math.sin(z*.52)+.10*(z/18);
@@ -73,27 +97,85 @@ for(let c=0;c+1<crossings.length;c+=2){const p=crossings[c],q=crossings[c+1];if(
 function ellipse3D(x,z,radX,radZ,col,dy=0){const pts=[];for(let i=0;i<=42;i++){let t=i*Math.PI*2/42,xx=x+Math.cos(t)*radX,zz=z+Math.sin(t)*radZ;pts.push(P(xx,zz,dy))}path(pts,col)}
 function renderBunker(){const z=13.6,x=middle(z)+width(z)+.32;ellipse3D(x,z,1.1,1.8,'#c2b58a',-.12);ellipse3D(x,z,.83,1.46,'#e2d4a0',-.11);for(let i=0;i<8;i++){let xx=x+Math.sin(i*2.34)*.55,zz=z+Math.cos(i*1.77)*.97;let p=P(xx,zz,-.07),q=P(xx+.17,zz+.27,-.07);if(!p||!q)continue;ctx.strokeStyle='#bba87858';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
 function renderTree(x,z,s=1){let ground=project(x,height(x,z)-.18,z),top=project(x,height(x,z)+1.6*s,z),leaf=project(x,height(x,z)+1.23*s,z);if(!ground||!top||!leaf)return;const rad=Math.min(37,ground.s*.55*s);if(rad<.45)return;ctx.strokeStyle='#273f25';ctx.lineWidth=Math.max(.8,rad*.14);ctx.beginPath();ctx.moveTo(ground.x,ground.y);ctx.lineTo(top.x,top.y+rad*.2);ctx.stroke();ctx.fillStyle='#214e35';ctx.beginPath();ctx.ellipse(leaf.x,leaf.y,rad*.9,rad*1.15,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#386c43';ctx.beginPath();ctx.ellipse(leaf.x-rad*.18,leaf.y-rad*.29,rad*.66,rad*.79,0,0,Math.PI*2);ctx.fill()}
+
+// Environmental treatment: grounded shrubs, scattered dry meadow grass, small stones
+// and layered plant shadows, always OUTSIDE the playable green.
+function renderRoughDetail(){
+ ctx.save();
+ for(let i=0;i<30;i++){
+   const z=1.4+i*1.05;
+   for(let side of [-1,1]){
+     for(let k=0;k<5;k++){
+       const off=width(z)+.92+k*.72+.27*Math.sin(i*2.3+k*4.4);
+       const x=middle(z)+side*off,p=P(x,z,-.23-.05*Math.abs(off-width(z)));
+       if(!p||p.x< -25||p.x>W+25||p.y< -35||p.y>H+35)continue;
+       const size=clamp(.20*p.s,.6,4.8),tone=(i+k)%3;
+       ctx.strokeStyle=tone===0?'rgba(212,194,127,.34)':tone===1?'rgba(164,189,104,.28)':'rgba(32,65,35,.35)';
+       ctx.lineWidth=clamp(size*.28,.4,1.2);
+       ctx.beginPath();ctx.moveTo(p.x-size*.6,p.y);ctx.lineTo(p.x-size*.20,p.y-size*1.15);
+       ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+size*.18,p.y-size*.9);
+       ctx.moveTo(p.x+size*.5,p.y);ctx.lineTo(p.x+size*.65,p.y-size*.65);ctx.stroke();
+     }
+   }
+ }
+ for(let i=0;i<22;i++){
+   const z=3+i*1.28,side=i%2===0?-1:1,x=middle(z)+side*(width(z)+1.7+.52*Math.sin(i*5.1)),p=P(x,z,-.2);
+   if(!p)continue;
+   const r=clamp(.33*p.s,1.2,10);
+   ctx.fillStyle='rgba(22,47,26,.24)';ctx.beginPath();ctx.ellipse(p.x+3,p.y+2,r*1.35,r*.38,0,0,Math.PI*2);ctx.fill();
+   for(let j=0;j<4;j++){
+     const ox=Math.cos(j*2.32+i)*r*.52,oy=Math.sin(j*2.32+i)*r*.17;
+     ctx.fillStyle=['#487446','#5b8651','#69874d','#3d6943'][j];
+     ctx.beginPath();ctx.ellipse(p.x+ox,p.y-r*.43+oy,r*.73,r*.60,0,0,Math.PI*2);ctx.fill();
+   }
+ }
+ ctx.restore();
+}
 function renderTrees(){const locations=[];for(let i=0;i<23;i++){const z=2.2+i*1.35,off=width(z)+2.2+.9*Math.abs(Math.sin(i*3.6));locations.push([middle(z)-off,z,.78+.32*Math.abs(Math.sin(i*11))]);if(i%3!==0)locations.push([middle(z)+off+.5,z,.68+.33*Math.abs(Math.cos(i*7.8))])}locations.sort((a,b)=>b[1]-a[1]);for(const t of locations)renderTree(...t)}
 function renderStoneBank(){// Naturalistic raised bank along the left edge (z 6.1 — 10.3); playable rebound is the course boundary.
 const z0=6.2,z1=10.2;const xs=z=>middle(z)-width(z)+.07;
 const a=P(xs(z0),z0,.04),b=P(xs(z0),z0,.31),c=P(xs(z1),z1,.31),d=P(xs(z1),z1,.04);
-path([a,b,c,d],'#819486','#334c3c',1);path([b,P(xs(z0)-.21,z0,.40),P(xs(z1)-.21,z1,.40),c],'#aec0a3');
-for(let z=z0+.55;z<z1;z+=.65){let x=xs(z),p=P(x,z,.03),q=P(x,z,.30);if(!p||!q)continue;ctx.strokeStyle='#344e42a0';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
+path([a,b,c,d],'#b78d61','#79553b',1.4);path([b,P(xs(z0)-.26,z0,.43),P(xs(z1)-.26,z1,.43),c],'#dfc699','#f1e4bb',1.8);
+for(let z=z0+.55;z<z1;z+=.65){let x=xs(z),p=P(x,z,.03),q=P(x,z,.30);if(!p||!q)continue;ctx.strokeStyle='#6b4936dd';ctx.lineWidth=1.25;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
+function renderBankHint(){
+ if(ball.z>11.3||holed)return;
+ const z=8.8,x=middle(z)-width(z)+.04,p=P(x,z,.74);
+ if(!p||p.x<0||p.x>W||p.y<18||p.y>H-55)return;
+ const label='BANK IT  ↗',size=clamp(W*.024,9,12),w=clamp(size*8.6,85,114),px=clamp(p.x+11,6,W-w-7),py=clamp(p.y-17,24,H-42);
+ ctx.save();
+ ctx.fillStyle='rgba(17,44,29,.88)';ctx.strokeStyle='#f1dbac';ctx.lineWidth=1.25;
+ ctx.beginPath();ctx.roundRect(px,py,w,28,8);ctx.fill();ctx.stroke();
+ ctx.fillStyle='#f8e2b2';ctx.font='800 '+size+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,px+w/2,py+14);
+ ctx.strokeStyle='#f1dbac';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(p.x, p.y);ctx.lineTo(px+12,py+27);ctx.stroke();
+ ctx.restore();
+}
 function renderRock(){const g=P(rock.x,rock.z,.02),top=P(rock.x,rock.z,.58);if(!g||!top)return;const rx=Math.max(5,g.s*rock.r),rh=Math.max(6,g.y-top.y);ctx.fillStyle='#263f35aa';ctx.beginPath();ctx.ellipse(g.x+4,g.y+2,rx*1.35,rx*.34,0,0,Math.PI*2);ctx.fill();path([{x:g.x-rx,y:g.y-rx*.21},{x:top.x-rx*.5,y:top.y+rh*.18},{x:top.x+rx*.35,y:top.y-rh*.04},{x:g.x+rx,y:g.y-rx*.21},{x:g.x+rx*.5,y:g.y+rx*.13}], '#788c80');path([{x:top.x-rx*.5,y:top.y+rh*.18},{x:top.x+rx*.35,y:top.y-rh*.04},{x:g.x+rx,y:g.y-rx*.21},{x:g.x-rx*.12,y:g.y-rx*.23}], '#aebdb0')}
 function renderCup(){const p=P(cup.x,cup.z,.038),b=P(cup.x,cup.z,1.13);if(!p||!b)return;const rad=clamp(.24*p.s,3,20);ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.49,0,0,Math.PI*2);ctx.fillStyle='#d3e4b5';ctx.fill();ctx.beginPath();ctx.ellipse(p.x,p.y,rad*.79,rad*.38,0,0,Math.PI*2);ctx.fillStyle='#142b1b';ctx.fill();ctx.strokeStyle='#f7f5e0';ctx.lineWidth=Math.max(1,1.2*p.s/30);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(b.x,b.y);ctx.stroke();path([{x:b.x+1,y:b.y},{x:b.x+clamp(13*p.s/19,8,18),y:b.y+5},{x:b.x+1,y:b.y+10}], '#e6f7a8')}
 function renderBall(){for(let i=0;i<trailed.length;i++){if(i%2)continue;const t=trailed[i],p=P(t.x,t.z,.035);if(!p)continue;const r=clamp(.105*p.s,1,6),a=(i+1)/trailed.length;ctx.beginPath();ctx.arc(p.x,p.y,r,0,2*Math.PI);ctx.fillStyle=`rgba(245,251,226,${(.17*a).toFixed(3)})`;ctx.fill()}
 let p=P(ball.x,ball.z,RADIUS+.035);if(!p)return;const rad=clamp(RADIUS*p.s,5,14);ctx.fillStyle='#173b2b65';ctx.beginPath();ctx.ellipse(p.x+rad*.23,p.y+rad*.7,rad*1.1,rad*.42,0,0,Math.PI*2);ctx.fill();const gr=ctx.createRadialGradient(p.x-rad*.4,p.y-rad*.5,rad*.05,p.x,p.y,rad);gr.addColorStop(0,'#ffffff');gr.addColorStop(.6,'#f5f9e9');gr.addColorStop(1,'#b7c5b7');ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();ctx.strokeStyle='#173b2b99';ctx.lineWidth=1;ctx.stroke()}
 function renderAim(){if(!aim||moving||holed)return;const shot=getAim();if(!shot)return;const here=P(ball.x,ball.z,.15);ctx.save();ctx.strokeStyle='#edf9cbcb';ctx.setLineDash([5,8]);ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=20;i++){let t=i/20,p=P(ball.x+shot.vx*t*3.5,ball.z+shot.vz*t*3.5,.10);if(!p)continue;if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}ctx.stroke();ctx.setLineDash([]);if(here){ctx.strokeStyle='#d2f57aaa';ctx.lineWidth=2;ctx.beginPath();ctx.arc(here.x,here.y,clamp(.26*here.s,12,24),0,Math.PI*2);ctx.stroke()}ctx.restore()}
-function sky(){let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#a4c7bd');g.addColorStop(.32,'#c4ddc1');g.addColorStop(.52,'#a3cbb7');g.addColorStop(1,'#254d39');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.save();ctx.globalAlpha=.53;path([{x:0,y:H*.38},{x:W*.11,y:H*.26},{x:W*.26,y:H*.36},{x:W*.43,y:H*.22},{x:W*.60,y:H*.33},{x:W*.81,y:H*.19},{x:W,y:H*.36},{x:W,y:H*.65},{x:0,y:H*.65}], '#78998e');ctx.globalAlpha=.33;path([{x:0,y:H*.43},{x:W*.16,y:H*.34},{x:W*.34,y:H*.40},{x:W*.57,y:H*.32},{x:W*.8,y:H*.40},{x:W,y:H*.35},{x:W,y:H*.6},{x:0,y:H*.6}],'#527869');ctx.restore()}
-function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
+function sky(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,'#83b5b9');g.addColorStop(.28,'#b9d5c8');g.addColorStop(.51,'#e7dfbb');g.addColorStop(1,'#2e6048');
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ const sun=ctx.createRadialGradient(W*.78,H*.21,1,W*.78,H*.21,W*.37);
+ sun.addColorStop(0,'rgba(255,244,203,.62)');sun.addColorStop(1,'rgba(255,241,210,0)');
+ ctx.fillStyle=sun;ctx.fillRect(0,0,W,H*.68);
+ ctx.save();ctx.fillStyle='rgba(255,255,246,.22)';
+ for(const c of [[.14,.18,.12,.019],[.22,.20,.09,.014],[.62,.145,.14,.022]]){ctx.beginPath();ctx.ellipse(W*c[0],H*c[1],W*c[2],H*c[3],0,0,Math.PI*2);ctx.fill()}
+ path([{x:0,y:H*.38},{x:W*.1,y:H*.34},{x:W*.22,y:H*.37},{x:W*.42,y:H*.27},{x:W*.54,y:H*.34},{x:W*.74,y:H*.29},{x:W,y:H*.38},{x:W,y:H*.58},{x:0,y:H*.58}],'rgba(85,128,122,.54)');
+ path([{x:0,y:H*.47},{x:W*.14,y:H*.395},{x:W*.32,y:H*.43},{x:W*.48,y:H*.36},{x:W*.64,y:H*.425},{x:W*.82,y:H*.37},{x:W,y:H*.435},{x:W,y:H*.64},{x:0,y:H*.64}],'rgba(54,112,87,.58)');
+ ctx.restore();
+}
+function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();renderBankHint();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
 function render(){screenCtx.drawImage(scenery,0,0,W,H);renderBall();renderAim()}
 function aimStrength(){if(!aim)return 0;return clamp(Math.hypot(aim.dx,aim.dy)/150,0,1)}
-function getAim(){if(!aim||aim.dy<5||Math.hypot(aim.dx,aim.dy)<15)return null;const angle=clamp(Math.atan2(-aim.dx,Math.max(15,aim.dy)),-.92,.92),power=aimStrength(),speed=2.1+6.45*power;return {vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,power}}
+function getAim(){if(!aim||aim.dy<5||Math.hypot(aim.dx,aim.dy)<15)return null;const angle=clamp(Math.atan2(-aim.dx,Math.max(15,aim.dy)),-.92,.92),power=aimStrength(),speed=2.26+6.95*power;return {vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,power}}
 function updateUI(){const p=getAim();$('powerFill').style.width=`${Math.round(p?p.power*100:0)}%`;$('powerMeter').setAttribute('aria-valuenow',Math.round(p?p.power*100:0));$('strokes').textContent=shots;$('status').textContent=holed?'HOLED — NICE ROLL':moving?'BALL IN MOTION':aim?'AIM · RELEASE TO PUTT':'READY TO ROLL';$('status').classList.toggle('holed',holed);$('tip').classList.toggle('off',Boolean(aim)||moving||holed)}
-function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';updateUI()}
-function physics(dt){if(!moving||holed)return;const g=gradient(ball.x,ball.z);const sp=Math.hypot(ball.vx,ball.vz);if(sp<.12){moving=false;ball.vx=ball.vz=0;updateUI();return}
+function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;setCamera();renderScenery();updateUI()}
+function physics(dt){if(!moving||holed)return;const g=gradient(ball.x,ball.z);const sp=Math.hypot(ball.vx,ball.vz);if(sp<.18){moving=false;ball.vx=ball.vz=0;updateUI();return}
 // Gravity projected onto the local green tangent + near-constant rolling resistance.
-const accX=-3.25*g.x-1.50*ball.vx/sp,accZ=-3.25*g.z-1.50*ball.vz/sp;
+const accX=-3.25*g.x-1.59*ball.vx/sp,accZ=-3.25*g.z-1.59*ball.vz/sp;
 ball.vx+=accX*dt;ball.vz+=accZ*dt;ball.x+=ball.vx*dt;ball.z+=ball.vz*dt;
 ball.z=clamp(ball.z,.35,18.45);if(ball.z===.35||ball.z===18.45)ball.vz*=-.56;
 const left=middle(ball.z)-width(ball.z)+RADIUS,right=middle(ball.z)+width(ball.z)-RADIUS;
@@ -105,18 +187,23 @@ const dc=Math.hypot(ball.x-cup.x,ball.z-cup.z),newSpeed=Math.hypot(ball.vx,ball.
 if(dc<.23&&newSpeed<3.4){holed=true;moving=false;ball.x=cup.x;ball.z=cup.z;ball.vx=ball.vz=0;announce='NICE ROLL';$('tip').textContent='HOLED IN '+shots+(shots===1?' PUTT':' PUTTS');$('tip').classList.remove('off');updateUI();return}
 if(trailed.length===0||Math.hypot(trailed.at(-1).x-ball.x,trailed.at(-1).z-ball.z)>.20){trailed.push({x:ball.x,z:ball.z});if(trailed.length>80)trailed.shift()}
 }
-function shoot(){const shot=getAim();aim=null;if(!shot){updateUI();return}ball.vx=shot.vx;ball.vz=shot.vz;shots++;moving=true;trailed=[];updateUI()}
+function shoot(){const shot=getAim();aim=null;if(!shot){updateUI();return}ball.vx=shot.vx;ball.vz=shot.vz;shots++;shotViewDistance=clamp(ball.z-cam.z,3.6,9.85);hasTakenShot=true;moving=true;trailed=[];updateUI()}
 function locate(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
 canvas.addEventListener('pointerdown',e=>{if(moving||holed)return;const p=locate(e);aim={startX:p.x,startY:p.y,dx:0,dy:0,id:e.pointerId};canvas.setPointerCapture(e.pointerId);updateUI()});
 canvas.addEventListener('pointermove',e=>{if(!aim||aim.id!==e.pointerId)return;const p=locate(e);aim.dx=p.x-aim.startX;aim.dy=p.y-aim.startY;updateUI()});
 canvas.addEventListener('pointerup',e=>{if(!aim||aim.id!==e.pointerId)return;const p=locate(e);aim.dx=p.x-aim.startX;aim.dy=p.y-aim.startY;shoot()});
 canvas.addEventListener('pointercancel',()=>{aim=null;updateUI()});
 $('reset').addEventListener('click',()=>{$('tip').textContent='PULL BACK & RELEASE TO PUTT';reset()});
-$('help').addEventListener('click',()=>{window.alert('PULL BACK TO PUTT\n\nTouch or click anywhere on the green, drag DOWN toward you for more power, and release. Drag diagonally to aim left or right. Watch how your shot curves with the actual green slope. Use RESET HOLE to try again.');});
-function resize(){const r=canvas.getBoundingClientRect();W=Math.max(10,r.width);H=Math.max(10,r.height);dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);screenCtx.setTransform(dpr,0,0,dpr,0,0);scenery.width=canvas.width;scenery.height=canvas.height;sceneryCtx.setTransform(dpr,0,0,dpr,0,0);renderScenery();render()}
-function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;acc+=dt;let n=0;while(acc>=1/120&&n++<7){physics(1/120);acc-=1/120}render();requestAnimationFrame(animate)}
+$('help').addEventListener('click',()=>{window.alert('PULL BACK TO PUTT\n\nTouch or click anywhere on the green, drag DOWN toward you for more power, and release. Drag diagonally to aim left or right. The view follows your rolling ball, then zooms closer behind it for your next putt. The warm stone bank marked BANK IT can redirect your shot. Use RESET HOLE to try again.');});
+function resize(){const r=canvas.getBoundingClientRect();W=Math.max(10,r.width);H=Math.max(10,r.height);dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);screenCtx.setTransform(dpr,0,0,dpr,0,0);scenery.width=canvas.width;scenery.height=canvas.height;sceneryCtx.setTransform(dpr,0,0,dpr,0,0);renderScenery();sceneryDirty=false;lastSceneryAt=0;render()}
+function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now;acc+=dt;let n=0;while(acc>=1/120&&n++<7){physics(1/120);acc-=1/120}
+ updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
+ render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[]},advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)}};
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>2.26+6.95*power,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
+ setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true},
+ advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
+ frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
 reset();resize();window.addEventListener('resize',resize);if('ResizeObserver' in window)new ResizeObserver(resize).observe(canvas);requestAnimationFrame(animate);
 })();
 </script>

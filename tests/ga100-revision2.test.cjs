@@ -1,0 +1,121 @@
+/**
+ * GA-100 Revision 2: zero-dependency smoke and physics regression checks.
+ * Run locally: node --test tests/ga100-revision2.test.cjs
+ * These tests verify program behavior with stub canvas drawing primitives;
+ * they do NOT replace visual QA on iPhone Safari or desktop browsers.
+ */
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const html = fs.readFileSync(path.resolve(__dirname, '../playtest/ga-100/index.html'), 'utf8');
+const source = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+assert.ok(source, 'The test page should include its gameplay script');
+
+function makeApp(width = 390, height = 570) {
+  const elements = Object.create(null);
+  const handlers = Object.create(null);
+  const fnames = ['setTransform', 'fillRect', 'save', 'restore', 'beginPath',
+    'closePath', 'moveTo', 'lineTo', 'fill', 'stroke', 'ellipse', 'arc',
+    'roundRect', 'fillText', 'drawImage', 'setLineDash'];
+  function context() {
+    const c = {};
+    for (const fn of fnames) c[fn] = () => {};
+    c.createLinearGradient = c.createRadialGradient = () => ({ addColorStop() {} });
+    return c;
+  }
+  function el(id) {
+    if (!elements[id]) elements[id] = {
+      style: {}, classList: { toggle() {}, add() {}, remove() {} },
+      setAttribute() {}, scrollIntoView() {},
+      addEventListener(type, callback) { handlers[id + ':' + type] = callback; }
+    };
+    return elements[id];
+  }
+  const canvas = el('course');
+  canvas.getContext = context;
+  canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
+  canvas.setPointerCapture = () => {};
+  const document = {
+    querySelector: () => canvas,
+    getElementById: el,
+    createElement: () => ({ getContext: context })
+  };
+  const window = { devicePixelRatio: 1, addEventListener() {}, alert() {} };
+  vm.runInNewContext(source, { window, document, requestAnimationFrame() {} },
+    { filename: 'ga-100-preview.js', timeout: 12000 });
+  return { hooks: window.__gaTest, handlers };
+}
+
+test('Revision 2 is correctly identified and existing branding is preserved', () => {
+  assert.match(html, /GA-100 · REVISION 2/);
+  assert.match(html, /ROLL IT SMOOTH/);
+  assert.match(html, /BANK IT/);
+});
+
+test('putting roll is moderately faster for weak, medium and strong shots', () => {
+  const { hooks: t } = makeApp();
+  for (const power of [0.2, 0.5, 0.85, 1.0]) {
+    const baseline = 2.1 + 6.45 * power;
+    const revised = t.getAimSpeed(power);
+    assert.ok(revised > baseline * 1.04, 'Revised speed should increase at ' + power);
+    assert.ok(revised < baseline * 1.13, 'Revised speed should remain modest at ' + power);
+  }
+});
+
+test('touch pullback causes one putt and ball reaches rest', () => {
+  const { hooks: t, handlers } = makeApp();
+  const e = (x, y) => ({ clientX: x, clientY: y, pointerId: 1 });
+  handlers['course:pointerdown'](e(195, 380));
+  handlers['course:pointermove'](e(205, 467));
+  handlers['course:pointerup'](e(205, 467));
+  assert.equal(t.getState().shots, 1);
+  assert.equal(t.getState().moving, true);
+  t.advance(10);
+  assert.equal(t.getState().moving, false);
+});
+
+test('camera automatically reframes after stopped ball; ball and cup stay in view', () => {
+  for (const [width, height] of [[390, 570], [1160, 620]]) {
+    const { hooks: t } = makeApp(width, height);
+    const start = t.getState();
+    t.setBall(start.x, start.z, 0, 4);
+    t.advance(10);
+    assert.equal(t.getState().moving, false);
+    for (let i = 0; i < 11; i++) t.updateCamera(0.12);
+    const cam = t.getCamera(), ball = t.getBallScreen(), cup = t.getCupScreen();
+    assert.ok(cam.hasTakenShot, 'A new shot should enable tracking');
+    assert.ok(cam.cam.z < t.getState().z, 'Camera should stay behind ball');
+    for (const [label, p] of [['ball', ball], ['cup', cup]]) {
+      assert.ok(p && p.x > 0 && p.x < width && p.y > 0 && p.y < height,
+        label + ' should remain in view at viewport ' + width);
+    }
+  }
+});
+
+test('left-edge bank produces a consistent rebound', () => {
+  const { hooks: t } = makeApp();
+  const z = 8, middle = .48 * Math.sin(z * .26 + .5) - .28 * Math.sin(z * .57);
+  const w = 2.33 + .16 * Math.sin(z * .52) + .10 * z / 18;
+  t.setBall(middle - w + .19, z, -2, 0.8);
+  t.advance(0.25);
+  assert.ok(t.getState().vx > 0, 'Ball must rebound toward center');
+});
+
+test('rolling is deterministic and reset clears shot and camera state', () => {
+  const { hooks: t } = makeApp();
+  const start = t.getState();
+  t.setBall(start.x, start.z, 2, 6);
+  t.advance(0.8);
+  const a = t.getState();
+  t.reset();
+  t.setBall(start.x, start.z, 2, 6);
+  t.advance(0.8);
+  const b = t.getState();
+  assert.ok(Math.abs(a.x - b.x) < 1e-10 && Math.abs(a.z - b.z) < 1e-10);
+  t.reset();
+  assert.equal(t.getState().shots, 0);
+  assert.equal(t.getCamera().hasTakenShot, false);
+});
