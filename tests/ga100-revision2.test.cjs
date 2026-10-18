@@ -302,6 +302,12 @@ test('GA-109: compact scorecard retains scoring and actions', () => {
   assert.match(css,/rgba\(3,24,18,\.24\)/,'Backdrop transparency retains course visibility');
   const { hooks:t, handlers,elements }=makeApp();
   const cup=t.getCup();
+  // Use a real stroke first; physics-only test helpers don't count putts.
+  const e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+  handlers['course:pointerdown'](e(195,350));
+  handlers['course:pointermove'](e(195,450));
+  handlers['course:pointerup'](e(195,450));
+  assert.equal(t.getState().shots,1);
   t.setBall(cup.x+.03,cup.z+.03,.2,.25);
   t.advance(1);
   t.showHoleResult();
