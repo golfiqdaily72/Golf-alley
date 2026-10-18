@@ -170,7 +170,7 @@ function sky(){
 function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();renderBankHint();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
 function render(){screenCtx.drawImage(scenery,0,0,W,H);renderBall();renderAim()}
 function aimStrength(){if(!aim)return 0;return clamp(Math.hypot(aim.dx,aim.dy)/150,0,1)}
-function getAim(){if(!aim||aim.dy<5||Math.hypot(aim.dx,aim.dy)<15)return null;const angle=clamp(Math.atan2(-aim.dx,Math.max(15,aim.dy)),-.92,.92),power=aimStrength(),speed=.75+8.9*power;return {vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,power}}
+function getAim(){if(!aim||aim.dy<5||Math.hypot(aim.dx,aim.dy)<15)return null;const angle=clamp(Math.atan2(-aim.dx,Math.max(15,aim.dy)),-.92,.92),power=aimStrength(),speed=2.26+6.95*power;return {vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,power}}
 function updateUI(){const p=getAim();$('powerFill').style.width=`${Math.round(p?p.power*100:0)}%`;$('powerMeter').setAttribute('aria-valuenow',Math.round(p?p.power*100:0));$('strokes').textContent=shots;$('status').textContent=holed?'HOLED — NICE ROLL':moving?'BALL IN MOTION':aim?'AIM · RELEASE TO PUTT':'READY TO ROLL';$('status').classList.toggle('holed',holed);$('tip').classList.toggle('off',Boolean(aim)||moving||holed)}
 function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;setCamera();renderScenery();updateUI()}
 function physics(dt){if(!moving||holed)return;const g=gradient(ball.x,ball.z);const sp=Math.hypot(ball.vx,ball.vz);if(sp<.18){moving=false;ball.vx=ball.vz=0;updateUI();return}
@@ -200,7 +200,7 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>.75+8.9*power,
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot}),getAimSpeed:power=>2.26+6.95*power,
  setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
