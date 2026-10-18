@@ -63,7 +63,7 @@ function makeApp(width = 390, height = 570) {
 
 test('Revision 2 is correctly identified and existing branding is preserved', () => {
   assert.match(html, /GA-100 · REVISION 2/);
-  assert.match(html, /ROLL IT SMOOTH/);
+  assert.match(html, /ROLL IT\./);
   assert.match(html, /QUICK TIP · BANK SHOTS/);
   assert.doesNotMatch(html, /renderBankHint/);
 });
