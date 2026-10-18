@@ -273,3 +273,60 @@ test('GA-108 reset cancels pending celebration timer', () => {
   t.showHoleResult();
   assert.equal(elements.holeResult.hidden,true,'No delayed ghost popup after reset');
 });
+
+test('GA-109: green and fringe terminate together in a rounded cap', () => {
+  const { hooks:t }=makeApp();
+  const end=t.getGreenEnd();
+  assert.equal(end,18.90);
+  assert.ok(t.getWidth(17.65)>t.getWidth(18.45),'Green narrows smoothly behind cup');
+  assert.ok(t.getWidth(18.45)>0,'End of green remains playable before boundary');
+  assert.ok(Math.abs(t.getWidth(end))<.001,'Green closes at actual far terminus');
+  assert.ok(Math.abs(t.getOuterWidth(end))<.001,'Fringe terminates with green; no flying strips');
+  for(let z=17.6;z<end;z+=.08){
+    assert.ok(t.getWidth(z)>=0,'No negative playable width');
+    assert.ok(t.getOuterWidth(z)>=t.getWidth(z),'Fringe outside playable green');
+  }
+});
+
+test('GA-109: red flag is enlarged and visibly distinct from the cup', () => {
+  assert.match(html, /P\(cup\.x,cup\.z,1\.63\)/,'Raised pin should be taller than previous 1.13');
+  assert.match(html, /'#dd303c'/,'Red flag material should render');
+  assert.match(html, /'#a91e30'/,'Red fold/shadow should render');
+  assert.match(html, /const fw=clamp\(p\.s\*\.62,19,43\)/,'Readable flag in portrait mode');
+});
+
+test('GA-109: compact scorecard retains scoring and actions', () => {
+  const css=html.match(/\/\* GA-109: smaller score feedback[\s\S]*?<\/style>/)?.[0];
+  assert.ok(css,'GA-109 compact scorecard CSS exists');
+  assert.match(css,/width:min\(100%,260px\)/,'Compact popup width <=260px');
+  assert.match(css,/rgba\(3,24,18,\.24\)/,'Backdrop transparency retains course visibility');
+  const { hooks:t, handlers,elements }=makeApp();
+  const cup=t.getCup();
+  // Use a real stroke first; physics-only test helpers don't count putts.
+  const e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+  handlers['course:pointerdown'](e(195,350));
+  handlers['course:pointermove'](e(195,450));
+  handlers['course:pointerup'](e(195,450));
+  assert.equal(t.getState().shots,1);
+  t.setBall(cup.x+.03,cup.z+.03,.2,.25);
+  t.advance(1);
+  t.showHoleResult();
+  assert.equal(elements.holeResult.hidden,false);
+  assert.equal(elements.resultName.textContent,'EAGLE');
+  handlers['resultDismiss:click']();
+  assert.equal(elements.holeResult.hidden,true);
+  t.reset();
+  assert.equal(t.getState().holed,false);
+});
+
+test('GA-109: terminal fringe geometry is bounded and backward camera stays stable', () => {
+  const { hooks:t }=makeApp();
+  const cup=t.getCup(),end=t.getGreenEnd();
+  assert.ok(end>cup.z+.8,'End cap must be beyond cup');
+  t.setBall(cup.x+.6,cup.z+.8,0,0);
+  t.advance(1);
+  for(let i=0;i<100;i++)t.updateCamera(.04);
+  const cam=t.getCamera(),cupScreen=t.getCupScreen();
+  assert.ok(Math.abs(cam.cameraYaw)>2.1,'Reverse camera after overshoot');
+  assert.ok(cupScreen&&cupScreen.dep>.1,'Cup remains renderable in reverse view');
+});

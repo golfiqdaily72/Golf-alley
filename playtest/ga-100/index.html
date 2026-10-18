@@ -40,6 +40,21 @@
 .result-actions button.primary{background:var(--lime);border-color:var(--lime);color:#17311f}
 @media(max-width:400px){.hole-result{padding:12px}.hole-result-card{padding:18px 15px}.result-emblem{margin-top:12px}.result-description{margin-bottom:13px}}
 @media(prefers-reduced-motion:no-preference){.hole-result:not([hidden]) .hole-result-card{animation:score-arrival .25s ease-out both}@keyframes score-arrival{from{transform:translateY(13px) scale(.97);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}}
+
+/* GA-109: smaller score feedback leaves the majority of the green visible. */
+.hole-result{background:rgba(3,24,18,.24);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);padding:12px}
+.hole-result-card{width:min(100%,260px);max-height:90%;padding:14px 14px 13px;border-radius:15px;box-shadow:0 11px 30px rgba(0,0,0,.35)}
+.result-kicker{font-size:8px;letter-spacing:1.3px}
+.result-emblem{width:32px;height:32px;font-size:20px;margin:7px auto 4px;border-width:1.5px}
+.result-title{font-size:21px;margin-top:5px;letter-spacing:-.6px}
+.result-name{font-size:13px;letter-spacing:1.9px;margin-top:4px}
+.result-description{font-size:10px;margin:5px 0 10px;line-height:1.35}
+.result-scores{padding:8px 4px;gap:4px;border-radius:9px}
+.result-scores span{font-size:8px;margin-bottom:4px;letter-spacing:.85px}
+.result-scores strong{font-size:21px}
+.result-actions{flex-direction:row;gap:7px;margin-top:10px}
+.result-actions button{flex:1;min-width:0;min-height:38px;padding:8px 5px;font-size:9px;letter-spacing:.35px;border-radius:8px}
+@media(max-width:400px){.hole-result-card{padding:12px 12px 11px}.result-emblem{margin-top:5px}.result-description{margin-bottom:8px}}
 </style>
 </head>
 <body>
@@ -65,7 +80,7 @@
   </div>
  </div>
 </div></div><div class="under"><div class="status" id="status" aria-live="polite">READY TO ROLL</div><div class="power-area">POWER <div class="power-track" role="progressbar" aria-label="Putt power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="powerMeter"><div class="power-fill" id="powerFill"></div></div></div></div></section>
-<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A warm sandstone edge and on-course marker show where an optional rebound can help.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull opposite your intended shot direction to aim anywhere; then release.</div></aside></div>
+<aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A naturally finished sandstone bank offers an optional rebound route, introduced by a brief start-of-hole tip.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull opposite your intended shot direction to aim anywhere; then release.</div></aside></div>
 <footer><span><strong>GOLF ALLEY</strong> · THE GREEN EXPERIENCE</span><span>GA-100 / V0.2 · PRODUCT REVIEW BUILD</span></footer>
 </div>
 <script>
@@ -106,7 +121,13 @@ let W=400,H=580,dpr=1,lastTime=0,acc=0,shots=0,aim=null,moving=false,holed=false
  }
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const middle=z=>.48*Math.sin(z*.26+.5)-.28*Math.sin(z*.57);
-const width=z=>2.33+.16*Math.sin(z*.52)+.10*(z/18);
+// The playable green ends in an organic, rounded cap BEHIND the flagstick.
+// Fringe follows precisely the same terminus rather than projecting forever.
+const GREEN_SHOULDER=17.62,GREEN_END=18.90,FRINGE_END=GREEN_END;
+const endTaper=z=>{const t=clamp((z-GREEN_SHOULDER)/(GREEN_END-GREEN_SHOULDER),0,1);return Math.sqrt(Math.max(0,1-t*t))};
+const baseWidth=z=>2.33+.16*Math.sin(z*.52)+.10*(z/18);
+const width=z=>baseWidth(z)*endTaper(z);
+const outerWidth=z=>(baseWidth(z)+.66)*endTaper(z);
 // One continuous 3D heightfield governs rendering AND ball acceleration.
 function height(x,z){return .20*Math.sin(z*.34+.25)+.19*Math.sin(.76*x+.18*z)+.057*x*Math.sin(z*.42)-.020*(z-8)+.025*Math.sin(x*1.33+z*.46)}
 function gradient(x,z){const h=.018;return {x:(height(x+h,z)-height(x-h,z))/(2*h),z:(height(x,z+h)-height(x,z-h))/(2*h)}}
@@ -122,29 +143,87 @@ function path(points,fill,stroke=null,line=1){ctx.beginPath();let did=false;for(
 function shade(color,delta){let rgb=color.map(c=>clamp(Math.round(c*delta),0,255));return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`}
 function rand(x){return (Math.sin(x*112.17+42.5)*43758.5453)%1}
 function polygonRough(z0,z1,x0,x1,bright){const terrainY=(x,z)=>height(x,z)-.21-.05*Math.abs(x-middle(z));const pts=[project(x0,terrainY(x0,z0),z0),project(x1,terrainY(x1,z0),z0),project(x1,terrainY(x1,z1),z1),project(x0,terrainY(x0,z1),z1)];path(pts,bright?'#3c6a40':'#38613d')}
-function renderGround(){for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;polygonRough(z0,z1,-19,19,i%7<3)}
-for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;for(let side of [-1,1]){const xa=z=>middle(z)+side*(width(z)+.05);const xb=z=>middle(z)+side*(width(z)+.73);
-path([P(xa(z0),z0,-.11),P(xb(z0),z0,-.25),P(xb(z1),z1,-.25),P(xa(z1),z1,-.11)],i%3===0?'#6a8550':'#5c7a47');}}
+function renderGround(){
+ // Broad rough continues to the horizon, but the manicured fringe MUST end
+ // with the green. Never draw disconnected strips above the end of the hole.
+ for(let ii=0;ii<=55;ii++){
+   const i=Math.cos(cameraYaw)<0?ii:55-ii,z0=i*.60,z1=z0+.6;
+   polygonRough(z0,z1,-19,19,i%7<3);
+ }
+ const segments=64,step=FRINGE_END/segments;
+ for(let ii=0;ii<segments;ii++){
+   const i=Math.cos(cameraYaw)<0?ii:segments-1-ii;
+   const z0=i*step,z1=Math.min(FRINGE_END,(i+1)*step);
+   for(const side of [-1,1]){
+     const inside=(z)=>middle(z)+side*width(z),outside=(z)=>middle(z)+side*outerWidth(z);
+     path([
+       P(inside(z0),z0,-.105),P(outside(z0),z0,-.19),
+       P(outside(z1),z1,-.19),P(inside(z1),z1,-.105)
+     ],i%8<4?'#728956':'#667e4c');
+   }
+ }
 }
-function drawGreen(){const nz=75,nx=24;
-for(let ii=0;ii<nz;ii++){const i=Math.cos(cameraYaw)<0?ii:nz-1-ii;const z0=.05+i*(18.7/nz),z1=.05+(i+1)*(18.7/nz);for(let j=0;j<nx;j++){
+function drawGreen(){const nz=80,nx=26;
+for(let ii=0;ii<nz;ii++){const i=Math.cos(cameraYaw)<0?ii:nz-1-ii;const z0=.05+i*((GREEN_END-.05)/nz),z1=.05+(i+1)*((GREEN_END-.05)/nz);for(let j=0;j<nx;j++){
 const u0=-1+2*j/nx,u1=-1+2*(j+1)/nx;
 const x=(z,u)=>middle(z)+u*width(z),a=P(x(z0,u0),z0,.025),b=P(x(z0,u1),z0,.025),c=P(x(z1,u1),z1,.025),d=P(x(z1,u0),z1,.025);
-const zm=(z0+z1)/2,xm=x(zm,(u0+u1)*.5),slope=gradient(xm,zm),l=1.02-.47*slope.x-.68*slope.z + (i%12<6?.045:-.025);
-const base=[78,150,86],line=shade(base,clamp(l,.76,1.22));path([a,b,c,d],line);
+const zm=(z0+z1)/2,xm=x(zm,(u0+u1)*.5),slope=gradient(xm,zm),l=1.02-.47*slope.x-.68*slope.z + (i%15<7?.020:-.012);
+const base=[87,152,89],line=shade(base,clamp(l,.82,1.15));path([a,b,c,d],line);
 }}
 // Border and mow lines are projected from the same playable 3D surface.
-for(let side of [-1,1]){ctx.beginPath();for(let i=0;i<=100;i++){const z=.07+i*18.65/100,q=P(middle(z)+side*(width(z)-.035),z,.04);if(!q)continue;if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=2.1;ctx.strokeStyle='#c5e5a0a0';ctx.stroke()}
-for(let i=1;i<7;i++){ctx.beginPath();for(let j=0;j<=78;j++){let z=.1+j*18.5/78, u=-1+2*i/7,x=middle(z)+u*width(z);const q=P(x,z,.036);if(!q)continue;if(j===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=.65;ctx.strokeStyle='#cbf5a816';ctx.stroke()}
+for(let side of [-1,1]){ctx.beginPath();for(let i=0;i<=100;i++){const z=.07+i*(GREEN_END-.07)/100,q=P(middle(z)+side*Math.max(0,width(z)-.032),z,.044);if(!q)continue;if(i===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=2.7;ctx.strokeStyle='#d7ec9fc9';ctx.stroke()}
+for(let i=1;i<7;i++){ctx.beginPath();for(let j=0;j<=78;j++){let z=.1+j*(GREEN_END-.14)/78, u=-1+2*i/7,x=middle(z)+u*width(z);const q=P(x,z,.036);if(!q)continue;if(j===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y)}ctx.lineWidth=.65;ctx.strokeStyle='#cbf5a816';ctx.stroke()}
 }
-function contourLines(){const minZ=.2,maxZ=18.6,dz=.58,du=.075;ctx.lineWidth=.84;ctx.strokeStyle='rgba(217,248,169,.23)';
+function renderFinishRim(){
+ // Distinct trailing rim of short rough around the back of the putting green.
+ const divisions=48,points=[];
+ for(let j=0;j<=divisions;j++){
+   const z=GREEN_SHOULDER+(GREEN_END-GREEN_SHOULDER)*j/divisions;
+   points.push(P(middle(z)-outerWidth(z),z,-.12));
+ }
+ for(let j=divisions;j>=0;j--){
+   const z=GREEN_SHOULDER+(GREEN_END-GREEN_SHOULDER)*j/divisions;
+   points.push(P(middle(z)+outerWidth(z),z,-.12));
+ }
+ // A border highlight, not a filled slab across the course.
+ ctx.beginPath();
+ let begun=false;
+ for(const p of points){
+   if(!p)continue;
+   if(!begun){ctx.moveTo(p.x,p.y);begun=true}else ctx.lineTo(p.x,p.y);
+ }
+ if(begun){ctx.strokeStyle='rgba(188,207,125,.42)';ctx.lineWidth=1.5;ctx.stroke();}
+}
+function contourLines(){const minZ=.2,maxZ=GREEN_END-.2,dz=.58,du=.075;ctx.lineWidth=.84;ctx.strokeStyle='rgba(217,248,169,.23)';
 // Marching squares across the actual green heightfield, at 0.12 m increments.
 for(let z=minZ;z<maxZ;z+=dz){for(let u=-.98;u<.96;u+=du){const sample=(uu,zz)=>{const x=middle(zz)+uu*width(zz);return {x,z:zz,y:height(x,zz)}};const pts=[sample(u,z),sample(u+du,z),sample(u+du,z+dz),sample(u,z+dz)];let low=Math.min(...pts.map(p=>p.y)),high=Math.max(...pts.map(p=>p.y));let a=Math.ceil(low/.13),b=Math.floor(high/.13);for(let k=a;k<=b;k++){const target=k*.13,crossings=[];for(let e=0;e<4;e++){const p=pts[e],q=pts[(e+1)%4];if((p.y<=target)!=(q.y<=target)){const t=(target-p.y)/(q.y-p.y),x=p.x+(q.x-p.x)*t,zz=p.z+(q.z-p.z)*t;crossings.push(project(x,target+.055,zz))}}
 for(let c=0;c+1<crossings.length;c+=2){const p=crossings[c],q=crossings[c+1];if(p&&q){ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}}}
 }}
 function ellipse3D(x,z,radX,radZ,col,dy=0){const pts=[];for(let i=0;i<=42;i++){let t=i*Math.PI*2/42,xx=x+Math.cos(t)*radX,zz=z+Math.sin(t)*radZ;pts.push(P(xx,zz,dy))}path(pts,col)}
-function renderBunker(){const z=13.6,x=middle(z)+width(z)+.32;ellipse3D(x,z,1.1,1.8,'#c2b58a',-.12);ellipse3D(x,z,.83,1.46,'#e2d4a0',-.11);for(let i=0;i<8;i++){let xx=x+Math.sin(i*2.34)*.55,zz=z+Math.cos(i*1.77)*.97;let p=P(xx,zz,-.07),q=P(xx+.17,zz+.27,-.07);if(!p||!q)continue;ctx.strokeStyle='#bba87858';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
-function renderTree(x,z,s=1){let ground=project(x,height(x,z)-.18,z),top=project(x,height(x,z)+1.6*s,z),leaf=project(x,height(x,z)+1.23*s,z);if(!ground||!top||!leaf)return;const rad=Math.min(37,ground.s*.55*s);if(rad<.45)return;ctx.strokeStyle='#273f25';ctx.lineWidth=Math.max(.8,rad*.14);ctx.beginPath();ctx.moveTo(ground.x,ground.y);ctx.lineTo(top.x,top.y+rad*.2);ctx.stroke();ctx.fillStyle='#214e35';ctx.beginPath();ctx.ellipse(leaf.x,leaf.y,rad*.9,rad*1.15,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#386c43';ctx.beginPath();ctx.ellipse(leaf.x-rad*.18,leaf.y-rad*.29,rad*.66,rad*.79,0,0,Math.PI*2);ctx.fill()}
+function renderBunker(){const z=13.6,x=middle(z)+width(z)+.32;ellipse3D(x,z,1.22,1.91,'#8e896d',-.14);ellipse3D(x,z,1.12,1.80,'#c9b892',-.12);ellipse3D(x,z,.87,1.52,'#e6d9b8',-.105);for(let i=0;i<8;i++){let xx=x+Math.sin(i*2.34)*.55,zz=z+Math.cos(i*1.77)*.97;let p=P(xx,zz,-.07),q=P(xx+.17,zz+.27,-.07);if(!p||!q)continue;ctx.strokeStyle='#bba87858';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
+function renderTree(x,z,s=1){
+ const ground=project(x,height(x,z)-.18,z),top=project(x,height(x,z)+1.83*s,z),
+       crown=project(x,height(x,z)+1.33*s,z);
+ if(!ground||!top||!crown)return;
+ const rad=clamp(ground.s*.54*s,1,41);
+ if(rad<.6)return;
+ ctx.save();
+ // Grounded, offset shadows and a naturally tapered trunk.
+ ctx.fillStyle='rgba(10,40,24,.26)';
+ ctx.beginPath();ctx.ellipse(ground.x+rad*.55,ground.y+rad*.28,rad*1.1,rad*.35,0,0,Math.PI*2);ctx.fill();
+ ctx.lineCap='round';ctx.strokeStyle='#3d422c';ctx.lineWidth=clamp(rad*.20,1.3,5);
+ ctx.beginPath();ctx.moveTo(ground.x,ground.y);ctx.lineTo(top.x-rad*.13,top.y+rad*.69);ctx.stroke();
+ const blobs=[
+   [-.43,.04,.69,.68,'#315a38'],[.39,-.10,.68,.77,'#2a5233'],
+   [-.08,-.45,.76,.72,'#386c40'],[.12,.36,.72,.60,'#386440'],
+   [-.36,-.35,.45,.43,'#4d8352'],[.23,-.45,.50,.43,'#487f4b']
+ ];
+ for(const [dx,dy,rx,ry,c] of blobs){
+   ctx.fillStyle=c;ctx.beginPath();
+   ctx.ellipse(crown.x+dx*rad,crown.y+dy*rad,rad*rx,rad*ry,0,0,Math.PI*2);ctx.fill();
+ }
+ ctx.restore();
+}
 
 // Environmental treatment: grounded shrubs, scattered dry meadow grass, small stones
 // and layered plant shadows, always OUTSIDE the playable green.
@@ -186,24 +265,73 @@ const a=P(xs(z0),z0,.04),b=P(xs(z0),z0,.31),c=P(xs(z1),z1,.31),d=P(xs(z1),z1,.04
 path([a,b,c,d],'#b78d61','#79553b',1.4);path([b,P(xs(z0)-.26,z0,.43),P(xs(z1)-.26,z1,.43),c],'#dfc699','#f1e4bb',1.8);
 for(let z=z0+.55;z<z1;z+=.65){let x=xs(z),p=P(x,z,.03),q=P(x,z,.30);if(!p||!q)continue;ctx.strokeStyle='#6b4936dd';ctx.lineWidth=1.25;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke()}}
 function renderRock(){const g=P(rock.x,rock.z,.02),top=P(rock.x,rock.z,.58);if(!g||!top)return;const rx=Math.max(5,g.s*rock.r),rh=Math.max(6,g.y-top.y);ctx.fillStyle='#263f35aa';ctx.beginPath();ctx.ellipse(g.x+4,g.y+2,rx*1.35,rx*.34,0,0,Math.PI*2);ctx.fill();path([{x:g.x-rx,y:g.y-rx*.21},{x:top.x-rx*.5,y:top.y+rh*.18},{x:top.x+rx*.35,y:top.y-rh*.04},{x:g.x+rx,y:g.y-rx*.21},{x:g.x+rx*.5,y:g.y+rx*.13}], '#788c80');path([{x:top.x-rx*.5,y:top.y+rh*.18},{x:top.x+rx*.35,y:top.y-rh*.04},{x:g.x+rx,y:g.y-rx*.21},{x:g.x-rx*.12,y:g.y-rx*.23}], '#aebdb0')}
-function renderCup(){const p=P(cup.x,cup.z,.038),b=P(cup.x,cup.z,1.13);if(!p||!b)return;const rad=clamp(.24*p.s,3,20);ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.49,0,0,Math.PI*2);ctx.fillStyle='#d3e4b5';ctx.fill();ctx.beginPath();ctx.ellipse(p.x,p.y,rad*.79,rad*.38,0,0,Math.PI*2);ctx.fillStyle='#142b1b';ctx.fill();ctx.strokeStyle='#f7f5e0';ctx.lineWidth=Math.max(1,1.2*p.s/30);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(b.x,b.y);ctx.stroke();path([{x:b.x+1,y:b.y},{x:b.x+clamp(13*p.s/19,8,18),y:b.y+5},{x:b.x+1,y:b.y+10}], '#e6f7a8')}
+function renderCup(){
+ const p=P(cup.x,cup.z,.038),top=P(cup.x,cup.z,1.63);
+ if(!p||!top)return;
+ const rad=clamp(.24*p.s,3,20);
+ ctx.save();
+ // Pole shadow follows the terrain; crisp cup rim remains distinct.
+ ctx.fillStyle='rgba(10,31,15,.27)';
+ ctx.beginPath();ctx.ellipse(p.x+rad*.38,p.y+rad*.31,rad*1.38,rad*.44,0,0,Math.PI*2);ctx.fill();
+ ctx.beginPath();ctx.ellipse(p.x,p.y,rad*1.13,rad*.57,0,0,Math.PI*2);
+ ctx.fillStyle='#e9e9d7';ctx.fill();
+ ctx.beginPath();ctx.ellipse(p.x,p.y,rad*.80,rad*.39,0,0,Math.PI*2);
+ ctx.fillStyle='#14281d';ctx.fill();
+ // Extra contrast and a slightly thicker flagstick.
+ ctx.strokeStyle='#30463d';ctx.lineWidth=clamp(p.s*.050,3.4,6);
+ ctx.beginPath();ctx.moveTo(p.x+.9,p.y);ctx.lineTo(top.x+.9,top.y);ctx.stroke();
+ ctx.strokeStyle='#f9f7e9';ctx.lineWidth=clamp(p.s*.034,2.5,4.6);
+ ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(top.x,top.y);ctx.stroke();
+ const fw=clamp(p.s*.62,19,43),fh=clamp(p.s*.25,10,24);
+ // Large red target flag, with a shaded fold rather than a flat triangle.
+ path([{x:top.x,y:top.y},{x:top.x+fw*.45,y:top.y+fh*.12},
+       {x:top.x+fw,y:top.y+fh*.40},{x:top.x+fw*.30,y:top.y+fh*.75},
+       {x:top.x,y:top.y+fh*.60}], '#dd303c','#fff0e0',.85);
+ path([{x:top.x+fw*.45,y:top.y+fh*.12},{x:top.x+fw,y:top.y+fh*.40},
+       {x:top.x+fw*.52,y:top.y+fh*.53}], '#a91e30');
+ ctx.strokeStyle='#ff9587';ctx.lineWidth=1.1;
+ ctx.beginPath();ctx.moveTo(top.x+fw*.10,top.y+fh*.09);ctx.lineTo(top.x+fw*.48,top.y+fh*.22);ctx.stroke();
+ ctx.restore();
+}
+function renderGreenTexture(){
+ // Deterministic low-contrast grass flecks; terrain and break remain readable.
+ ctx.save();
+ for(let i=0;i<260;i++){
+   const z=.8+(i*.791 % (GREEN_END-1.1)),u=Math.sin(i*12.735)*.88;
+   const x=middle(z)+u*width(z),p=P(x,z,.045);
+   if(!p||p.x<0||p.x>W||p.y<0||p.y>H)continue;
+   const r=clamp(.03*p.s,.35,1.25);
+   ctx.fillStyle=i%4===0?'rgba(194,219,152,.23)':'rgba(33,90,46,.15)';
+   ctx.fillRect(p.x,p.y,r*1.35,r*.45);
+ }
+ ctx.restore();
+}
 function renderBall(){if(holed)return;for(let i=0;i<trailed.length;i++){if(i%2)continue;const t=trailed[i],p=P(t.x,t.z,.035);if(!p)continue;const r=clamp(.105*p.s,1,6),a=(i+1)/trailed.length;ctx.beginPath();ctx.arc(p.x,p.y,r,0,2*Math.PI);ctx.fillStyle=`rgba(245,251,226,${(.17*a).toFixed(3)})`;ctx.fill()}
 let p=P(ball.x,ball.z,RADIUS+.035);if(!p)return;const rad=clamp(RADIUS*p.s,5,14);ctx.fillStyle='#173b2b65';ctx.beginPath();ctx.ellipse(p.x+rad*.23,p.y+rad*.7,rad*1.1,rad*.42,0,0,Math.PI*2);ctx.fill();const gr=ctx.createRadialGradient(p.x-rad*.4,p.y-rad*.5,rad*.05,p.x,p.y,rad);gr.addColorStop(0,'#ffffff');gr.addColorStop(.6,'#f5f9e9');gr.addColorStop(1,'#b7c5b7');ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();ctx.strokeStyle='#173b2b99';ctx.lineWidth=1;ctx.stroke()}
 function renderAim(){if(!aim||moving||holed)return;const shot=getAim();if(!shot)return;const here=P(ball.x,ball.z,.15);ctx.save();ctx.strokeStyle='#edf9cbcb';ctx.setLineDash([5,8]);ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<=20;i++){let t=i/20,p=P(ball.x+shot.vx*t*3.5,ball.z+shot.vz*t*3.5,.10);if(!p)continue;if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)}ctx.stroke();ctx.setLineDash([]);if(here){ctx.strokeStyle='#d2f57aaa';ctx.lineWidth=2;ctx.beginPath();ctx.arc(here.x,here.y,clamp(.26*here.s,12,24),0,Math.PI*2);ctx.stroke()}ctx.restore()}
 function sky(){
  const g=ctx.createLinearGradient(0,0,0,H);
- g.addColorStop(0,'#83b5b9');g.addColorStop(.28,'#b9d5c8');g.addColorStop(.51,'#e7dfbb');g.addColorStop(1,'#2e6048');
+ g.addColorStop(0,'#77a8b8');g.addColorStop(.30,'#b4d0c8');
+ g.addColorStop(.58,'#e5ddbd');g.addColorStop(1,'#37634a');
  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- const sun=ctx.createRadialGradient(W*.78,H*.21,1,W*.78,H*.21,W*.37);
- sun.addColorStop(0,'rgba(255,244,203,.62)');sun.addColorStop(1,'rgba(255,241,210,0)');
+ const sun=ctx.createRadialGradient(W*.74,H*.18,1,W*.74,H*.18,W*.49);
+ sun.addColorStop(0,'rgba(255,242,201,.44)');sun.addColorStop(1,'rgba(255,242,201,0)');
  ctx.fillStyle=sun;ctx.fillRect(0,0,W,H*.68);
- ctx.save();ctx.fillStyle='rgba(255,255,246,.22)';
- for(const c of [[.14,.18,.12,.019],[.22,.20,.09,.014],[.62,.145,.14,.022]]){ctx.beginPath();ctx.ellipse(W*c[0],H*c[1],W*c[2],H*c[3],0,0,Math.PI*2);ctx.fill()}
- path([{x:0,y:H*.38},{x:W*.1,y:H*.34},{x:W*.22,y:H*.37},{x:W*.42,y:H*.27},{x:W*.54,y:H*.34},{x:W*.74,y:H*.29},{x:W,y:H*.38},{x:W,y:H*.58},{x:0,y:H*.58}],'rgba(85,128,122,.54)');
- path([{x:0,y:H*.47},{x:W*.14,y:H*.395},{x:W*.32,y:H*.43},{x:W*.48,y:H*.36},{x:W*.64,y:H*.425},{x:W*.82,y:H*.37},{x:W,y:H*.435},{x:W,y:H*.64},{x:0,y:H*.64}],'rgba(54,112,87,.58)');
- ctx.restore();
+ // A soft rolling horizon avoids jagged illustrated mountain triangles.
+ for(const layer of [
+   {base:.41,amp:.022,offset:0,col:'rgba(103,144,128,.32)'},
+   {base:.50,amp:.033,offset:1.9,col:'rgba(70,113,91,.47)'}
+ ]){
+   const points=[{x:0,y:H}];
+   for(let j=0;j<=38;j++){
+     const t=j/38;
+     points.push({x:t*W,y:H*(layer.base+layer.amp*Math.sin(t*7.6+layer.offset)+.011*Math.sin(t*17.2+layer.offset))});
+   }
+   points.push({x:W,y:H});
+   path(points,layer.col);
+ }
 }
-function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();contourLines();renderStoneBank();renderRock();renderCup();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
+function renderScenery(){ctx=sceneryCtx;sky();setCamera();renderGround();renderRoughDetail();renderBunker();renderTrees();drawGreen();renderFinishRim();renderGreenTexture();contourLines();renderStoneBank();renderRock();renderCup();let shadeG=ctx.createLinearGradient(0,H*.8,0,H);shadeG.addColorStop(0,'rgba(5,25,16,0)');shadeG.addColorStop(1,'rgba(5,25,16,.3)');ctx.fillStyle=shadeG;ctx.fillRect(0,H*.8,W,H*.2);ctx=screenCtx}
 function render(){screenCtx.drawImage(scenery,0,0,W,H);renderBall();renderAim()}
 function aimStrength(){if(!aim)return 0;return clamp(Math.hypot(aim.dx,aim.dy)/150,0,1)}
 function getAim(){
@@ -280,7 +408,7 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getHoleScore:(putts,par=3)=>holeScore(putts,par),showHoleResult,hideHoleResult,getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getWidth:(z)=>width(z),getOuterWidth:(z)=>outerWidth(z),getGreenEnd:()=>GREEN_END,getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getHoleScore:(putts,par=3)=>holeScore(putts,par),showHoleResult,hideHoleResult,getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
  setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true;shotYaw=cameraYaw},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
