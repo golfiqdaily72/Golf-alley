@@ -85,12 +85,12 @@ function path(points,fill,stroke=null,line=1){ctx.beginPath();let did=false;for(
 function shade(color,delta){let rgb=color.map(c=>clamp(Math.round(c*delta),0,255));return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`}
 function rand(x){return (Math.sin(x*112.17+42.5)*43758.5453)%1}
 function polygonRough(z0,z1,x0,x1,bright){const terrainY=(x,z)=>height(x,z)-.21-.05*Math.abs(x-middle(z));const pts=[project(x0,terrainY(x0,z0),z0),project(x1,terrainY(x1,z0),z0),project(x1,terrainY(x1,z1),z1),project(x0,terrainY(x0,z1),z1)];path(pts,bright?'#3c6a40':'#38613d')}
-function renderGround(){for(let i=55;i>=0;i--){const z0=i*.60,z1=z0+.6;polygonRough(z0,z1,-19,19,i%7<3)}
-for(let i=55;i>=0;i--){const z0=i*.60,z1=z0+.6;for(let side of [-1,1]){const xa=z=>middle(z)+side*(width(z)+.05);const xb=z=>middle(z)+side*(width(z)+.73);
+function renderGround(){for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;polygonRough(z0,z1,-19,19,i%7<3)}
+for(let ii=0;ii<=55;ii++){const i=Math.cos(cameraYaw)<0?ii:55-ii;const z0=i*.60,z1=z0+.6;for(let side of [-1,1]){const xa=z=>middle(z)+side*(width(z)+.05);const xb=z=>middle(z)+side*(width(z)+.73);
 path([P(xa(z0),z0,-.11),P(xb(z0),z0,-.25),P(xb(z1),z1,-.25),P(xa(z1),z1,-.11)],i%3===0?'#6a8550':'#5c7a47');}}
 }
 function drawGreen(){const nz=75,nx=24;
-for(let i=nz-1;i>=0;i--){const z0=.05+i*(18.7/nz),z1=.05+(i+1)*(18.7/nz);for(let j=0;j<nx;j++){
+for(let ii=0;ii<nz;ii++){const i=Math.cos(cameraYaw)<0?ii:nz-1-ii;const z0=.05+i*(18.7/nz),z1=.05+(i+1)*(18.7/nz);for(let j=0;j<nx;j++){
 const u0=-1+2*j/nx,u1=-1+2*(j+1)/nx;
 const x=(z,u)=>middle(z)+u*width(z),a=P(x(z0,u0),z0,.025),b=P(x(z0,u1),z0,.025),c=P(x(z1,u1),z1,.025),d=P(x(z1,u0),z1,.025);
 const zm=(z0+z1)/2,xm=x(zm,(u0+u1)*.5),slope=gradient(xm,zm),l=1.02-.47*slope.x-.68*slope.z + (i%12<6?.045:-.025);
@@ -142,7 +142,7 @@ function renderRoughDetail(){
  }
  ctx.restore();
 }
-function renderTrees(){const locations=[];for(let i=0;i<23;i++){const z=2.2+i*1.35,off=width(z)+2.2+.9*Math.abs(Math.sin(i*3.6));locations.push([middle(z)-off,z,.78+.32*Math.abs(Math.sin(i*11))]);if(i%3!==0)locations.push([middle(z)+off+.5,z,.68+.33*Math.abs(Math.cos(i*7.8))])}locations.sort((a,b)=>b[1]-a[1]);for(const t of locations)renderTree(...t)}
+function renderTrees(){const locations=[];for(let i=0;i<23;i++){const z=2.2+i*1.35,off=width(z)+2.2+.9*Math.abs(Math.sin(i*3.6));locations.push([middle(z)-off,z,.78+.32*Math.abs(Math.sin(i*11))]);if(i%3!==0)locations.push([middle(z)+off+.5,z,.68+.33*Math.abs(Math.cos(i*7.8))])}locations.sort((a,b)=>Math.cos(cameraYaw)<0?a[1]-b[1]:b[1]-a[1]);for(const t of locations)renderTree(...t)}
 function renderStoneBank(){// Naturalistic raised bank along the left edge (z 6.1 — 10.3); playable rebound is the course boundary.
 const z0=6.2,z1=10.2;const xs=z=>middle(z)-width(z)+.07;
 const a=P(xs(z0),z0,.04),b=P(xs(z0),z0,.31),c=P(xs(z1),z1,.31),d=P(xs(z1),z1,.04);
