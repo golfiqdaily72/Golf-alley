@@ -34,6 +34,16 @@ function makeApp(width = 390, height = 570) {
     };
     return elements[id];
   }
+  // These DOM elements exist in the real HTML, including the initial tip.
+  el('bankIntro').hidden = false;
+  const timers = new Map();
+  let nextTimerId = 0;
+  const setTimeoutStub = (fn, ms) => {
+    const id = ++nextTimerId;
+    timers.set(id, { fn, ms });
+    return id;
+  };
+  const clearTimeoutStub = id => timers.delete(id);
   const canvas = el('course');
   canvas.getContext = context;
   canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
@@ -44,15 +54,18 @@ function makeApp(width = 390, height = 570) {
     createElement: () => ({ getContext: context })
   };
   const window = { devicePixelRatio: 1, addEventListener() {}, alert() {} };
-  vm.runInNewContext(source, { window, document, requestAnimationFrame() {} },
-    { filename: 'ga-100-preview.js', timeout: 12000 });
-  return { hooks: window.__gaTest, handlers };
+  vm.runInNewContext(source, {
+    window, document, requestAnimationFrame() {},
+    setTimeout: setTimeoutStub, clearTimeout: clearTimeoutStub
+  }, { filename: 'ga-100-preview.js', timeout: 12000 });
+  return { hooks: window.__gaTest, handlers, elements, timers };
 }
 
 test('Revision 2 is correctly identified and existing branding is preserved', () => {
   assert.match(html, /GA-100 · REVISION 2/);
   assert.match(html, /ROLL IT SMOOTH/);
-  assert.match(html, /BANK IT/);
+  assert.match(html, /QUICK TIP · BANK SHOTS/);
+  assert.doesNotMatch(html, /renderBankHint/);
 });
 
 test('putting roll is moderately faster for weak, medium and strong shots', () => {
@@ -118,4 +131,68 @@ test('rolling is deterministic and reset clears shot and camera state', () => {
   t.reset();
   assert.equal(t.getState().shots, 0);
   assert.equal(t.getCamera().hasTakenShot, false);
+});
+
+test('all 360 degrees of aiming are possible, including backward and sideways', () => {
+  const { hooks: t, handlers } = makeApp();
+  const e = (x,y) => ({ clientX:x, clientY:y, pointerId:1 });
+  for (const [dx,dy] of [[0,100],[0,-100],[100,0],[-100,0],[100,100],[-100,100],[100,-100],[-100,-100]]) {
+    t.reset();
+    handlers['course:pointerdown'](e(195,310));
+    handlers['course:pointermove'](e(195+dx,310+dy));
+    const shot=t.getAim();
+    assert.ok(shot && Number.isFinite(shot.vx) && Number.isFinite(shot.vz),
+      'Valid 360-degree shot should exist for drag '+dx+','+dy);
+    if (dy<0 && dx===0) assert.ok(shot.vz<0,'Pulling up aims back toward tee');
+    if (dy>0 && dx===0) assert.ok(shot.vz>0,'Pulling down aims up the course');
+    handlers['course:pointercancel'](e(195+dx,310+dy));
+  }
+});
+
+test('after overshooting the cup, camera turns around and pulling down shoots back to cup', () => {
+  const { hooks: t, handlers } = makeApp();
+  const cup=t.getCup(),e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+  t.setBall(cup.x+.5,cup.z+.9,0,0);
+  t.advance(1);
+  assert.equal(t.getState().moving,false);
+  for (let i=0;i<130;i++) t.updateCamera(.04);
+  const camera=t.getCamera();
+  assert.ok(Math.abs(camera.cameraYaw)>2.2,'Camera must reverse after ball passes the cup');
+  assert.ok(camera.cam.z>t.getState().z,'Camera must be behind ball facing cup');
+  const target=t.getCupScreen();
+  assert.ok(target&&target.x>0&&target.x<390&&target.y>0&&target.y<570,
+    'Cup must remain on screen after turning around');
+  handlers['course:pointerdown'](e(180,370));
+  handlers['course:pointermove'](e(180,460));
+  const shot=t.getAim();
+  assert.ok(shot?.vz<0,'Pulling down should shoot back in negative world z');
+  handlers['course:pointerup'](e(180,460));
+  assert.equal(t.getState().shots,1);
+});
+
+test('holed ball disappears visually and reset returns it', () => {
+  const { hooks:t }=makeApp(),cup=t.getCup();
+  t.setBall(cup.x+.03,cup.z+.03,.2,.25);
+  t.advance(1);
+  assert.equal(t.getState().holed,true);
+  assert.equal(t.getRenderBallVisible(),false);
+  t.reset();
+  assert.equal(t.getState().holed,false);
+  assert.equal(t.getRenderBallVisible(),true);
+});
+
+test('banking tip is outside green, dismissible, and automatically times out', () => {
+  assert.ok(html.indexOf('id="bankIntro"')<html.indexOf('id="course"'),
+    'Tip must appear above canvas, never over cup');
+  const app=makeApp();
+  assert.equal(app.elements.bankIntro.hidden,false);
+  assert.equal(app.timers.size,1);
+  const onlyTimer=[...app.timers.values()][0];
+  assert.equal(onlyTimer.ms,6500);
+  onlyTimer.fn();
+  assert.equal(app.elements.bankIntro.hidden,true);
+  const again=makeApp();
+  again.handlers['dismissBankTip:click']();
+  assert.equal(again.elements.bankIntro.hidden,true);
+  assert.equal(again.timers.size,0);
 });
