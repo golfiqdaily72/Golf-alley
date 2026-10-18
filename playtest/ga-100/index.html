@@ -21,13 +21,50 @@
 .bank-intro{display:flex;align-items:center;gap:12px;margin:0 3px 10px;padding:12px 13px;border:1px solid #d2c18a88;border-radius:12px;background:linear-gradient(105deg,#294333,#173b30);box-shadow:0 7px 16px #0003;color:#f8ead0;font-size:12px;line-height:1.45}
 .bank-intro[hidden]{display:none}.bank-intro strong{display:block;color:#f2d99f;font-size:11px;letter-spacing:1px;margin-bottom:2px}.bank-intro .bank-copy{flex:1;min-width:0}
 .bank-intro button{border:1px solid #e5cd9c77;border-radius:8px;background:#375443;color:#f9efda;min-width:34px;min-height:34px;font-size:20px;line-height:1;flex-shrink:0}
+
+/* Visible only after the ball drops — no interruption during putting. */
+.hole-result{position:absolute;inset:0;z-index:6;display:grid;place-items:center;padding:17px;background:rgba(3,24,18,.67);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.hole-result[hidden]{display:none}
+.hole-result-card{width:min(100%,340px);max-height:100%;overflow-y:auto;border:1px solid #d3e798a8;border-radius:20px;background:linear-gradient(160deg,#173f30 0%,#0b291f 92%);color:var(--cream);padding:24px 22px 21px;text-align:center;box-shadow:0 22px 65px #0009}
+.result-kicker{color:#d0ed9c;font-size:10px;font-weight:850;letter-spacing:2.1px}
+.result-emblem{margin:17px auto 8px;display:grid;place-items:center;width:49px;height:49px;border:2px solid #d1f47b;border-radius:50%;color:#d1f47b;font-size:29px;line-height:1}
+.result-title{font-size:clamp(25px,5.2vw,31px);font-weight:850;letter-spacing:-1.2px;margin-top:9px}
+.result-name{font-size:15px;font-weight:800;letter-spacing:2.6px;color:#d0f47c;margin-top:7px}
+.result-description{font-size:12px;color:#b8cbb8;line-height:1.5;margin:11px 0 20px}
+.result-scores{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;border:1px solid #b2d08746;border-radius:12px;padding:15px 6px;background:#0a2a2180}
+.result-scores span{display:block;font-size:9px;letter-spacing:1.4px;color:#b2c7af;font-weight:800;margin-bottom:7px}
+.result-scores strong{display:block;font-size:30px;line-height:1.1;letter-spacing:-.7px}
+.result-scores > div+div{border-left:1px solid #afc99137}
+.result-actions{display:flex;flex-direction:column;gap:9px;margin-top:17px}
+.result-actions button{width:100%;min-height:45px;border-radius:11px;padding:12px 15px;border:1px solid #86a47e;background:#204a38;letter-spacing:1.4px;font-size:11px;font-weight:850}
+.result-actions button.primary{background:var(--lime);border-color:var(--lime);color:#17311f}
+@media(max-width:400px){.hole-result{padding:12px}.hole-result-card{padding:18px 15px}.result-emblem{margin-top:12px}.result-description{margin-bottom:13px}}
+@media(prefers-reduced-motion:no-preference){.hole-result:not([hidden]) .hole-result-card{animation:score-arrival .25s ease-out both}@keyframes score-arrival{from{transform:translateY(13px) scale(.97);opacity:.7}to{transform:translateY(0) scale(1);opacity:1}}}
 </style>
 </head>
 <body>
 <div class="shell">
 <header class="top"><div class="identity"><div class="brandmark" aria-hidden="true">↗</div><div><strong>GOLF <span>ALLEY</span></strong><small>ROLL IT SMOOTH</small></div></div><span class="buildtag">GA-100 · REVISION 2</span></header>
 <section class="intro"><div><div class="eyebrow">THE GREEN EXPERIENCE / V0.2</div><h1>See the slope.<br><em>Feel the break.</em></h1><p>Premium green contours, a clearer stone bank, quicker rolls and an automatic next-shot camera — all playable on your phone.</p></div><div class="stage-note">FIRST LOOK<strong>ONE-HOLE VERTICAL SLICE</strong>YOUR REVIEW BEFORE NINE</div></section>
-<div class="layout"><section class="game" aria-label="GA-100 putting preview"><div class="hud"><div class="stat"><div class="stat-label">HOLE 01 · CONCEPT</div><div class="stat-val name">The Bend</div></div><div class="stat"><div class="stat-label">PAR</div><div class="stat-val">3</div></div><div class="stat"><div class="stat-label">PUTTS</div><div class="stat-val" id="strokes">0</div></div></div><div class="bank-intro" id="bankIntro" role="status"><span aria-hidden="true">↗</span><div class="bank-copy"><strong>QUICK TIP · BANK SHOTS</strong>Use the sandstone edge to bounce your putt. Pull opposite your intended shot direction — all 360° are available.</div><button id="dismissBankTip" aria-label="Dismiss bank shot tip">×</button></div><div class="course-wrap"><canvas id="course" role="img" aria-label="Interactive projected 3D golf putting corridor. Drag opposite the direction you want the ball to move, then release. Aim in any direction. Touch and mouse supported."></canvas><div class="course-stamp">THE FOUNDERS NINE / STUDY 01</div><div class="course-stamp right">3D GREEN · GA-100</div><div class="tip" id="tip">DRAG TO AIM · RELEASE TO PUTT</div></div><div class="under"><div class="status" id="status" aria-live="polite">READY TO ROLL</div><div class="power-area">POWER <div class="power-track" role="progressbar" aria-label="Putt power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="powerMeter"><div class="power-fill" id="powerFill"></div></div></div></div></section>
+<div class="layout"><section class="game" aria-label="GA-100 putting preview"><div class="hud"><div class="stat"><div class="stat-label">HOLE 01 · CONCEPT</div><div class="stat-val name">The Bend</div></div><div class="stat"><div class="stat-label">PAR</div><div class="stat-val">3</div></div><div class="stat"><div class="stat-label">PUTTS</div><div class="stat-val" id="strokes">0</div></div></div><div class="bank-intro" id="bankIntro" role="status"><span aria-hidden="true">↗</span><div class="bank-copy"><strong>QUICK TIP · BANK SHOTS</strong>Use the sandstone edge to bounce your putt. Pull opposite your intended shot direction — all 360° are available.</div><button id="dismissBankTip" aria-label="Dismiss bank shot tip">×</button></div><div class="course-wrap"><canvas id="course" role="img" aria-label="Interactive projected 3D golf putting corridor. Drag opposite the direction you want the ball to move, then release. Aim in any direction. Touch and mouse supported."></canvas><div class="course-stamp">THE FOUNDERS NINE / STUDY 01</div><div class="course-stamp right">3D GREEN · GA-100</div><div class="tip" id="tip">DRAG TO AIM · RELEASE TO PUTT</div>
+<div class="hole-result" id="holeResult" role="dialog" aria-modal="true" aria-labelledby="holeResultTitle" hidden>
+ <div class="hole-result-card">
+  <div class="result-kicker">THE FOUNDERS NINE · HOLE 01</div>
+  <div class="result-emblem" aria-hidden="true">✓</div>
+  <div class="result-title" id="holeResultTitle">HOLE COMPLETE</div>
+  <div class="result-name" id="resultName">PAR</div>
+  <p class="result-description" id="resultDescription">Your putt dropped. Nice roll.</p>
+  <div class="result-scores" aria-label="Hole score">
+   <div><span>PUTTS</span><strong id="resultPutts">3</strong></div>
+   <div><span>PAR</span><strong id="resultPar">3</strong></div>
+   <div><span>TO PAR</span><strong id="resultRelative">E</strong></div>
+  </div>
+  <div class="result-actions">
+   <button class="primary" id="resultReplay" type="button">↺ PLAY AGAIN</button>
+   <button id="resultDismiss" type="button">VIEW GREEN</button>
+  </div>
+ </div>
+</div></div><div class="under"><div class="status" id="status" aria-live="polite">READY TO ROLL</div><div class="power-area">POWER <div class="power-track" role="progressbar" aria-label="Putt power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="powerMeter"><div class="power-fill" id="powerFill"></div></div></div></div></section>
 <aside class="panel"><div class="section-kicker">COURSE 001 · THE FOUNDERS NINE</div><h2>The Bend.</h2><p>A fairway-shaped putting green winds toward a raised cup. Read the terrain, aim for the highlighted left stone bank, then enjoy a closer view for your next putt.</p><div class="feature-list"><div class="feature"><span class="feature-icon">◒</span><div><strong>Real elevation</strong><small>A sculpted 3D heightfield changes how the ball accelerates, slows, and curves.</small></div></div><div class="feature"><span class="feature-icon">∿</span><div><strong>Subtle green reading</strong><small>Natural shading and faint contour bands reveal the slopes beneath your ball.</small></div></div><div class="feature"><span class="feature-icon">◇</span><div><strong>Optional bank shot</strong><small>A warm sandstone edge and on-course marker show where an optional rebound can help.</small></div></div></div><div class="controls"><button class="btn primary" id="reset">↺ RESET HOLE</button><button class="btn" id="help">HOW TO PLAY</button></div><div class="progress"><strong>VERTICAL SLICE · NOT THE LIVE GAME</strong><div>Revision 2 of the one-hole experiment for GA-101 through GA-106. This is still a review build; the original nine-hole homepage remains unchanged.</div></div><div class="footnote">Revision 2 playtest: a slightly quicker roll, faster next-shot readiness, distance-aware camera reframing, clearer banking, and richer non-playable scenery. Pull opposite your intended shot direction to aim anywhere; then release.</div></aside></div>
 <footer><span><strong>GOLF ALLEY</strong> · THE GREEN EXPERIENCE</span><span>GA-100 / V0.2 · PRODUCT REVIEW BUILD</span></footer>
 </div>
@@ -37,7 +74,7 @@ const canvas=document.querySelector('#course'),screenCtx=canvas.getContext('2d',
 const scenery=document.createElement('canvas'),sceneryCtx=scenery.getContext('2d',{alpha:false});let ctx=screenCtx;
 const $=id=>document.getElementById(id), RADIUS=.15, FINAL_Z=17.15;
 let W=400,H=580,dpr=1,lastTime=0,acc=0,shots=0,aim=null,moving=false,holed=false,trailed=[],ball={x:0,z:1.55,vx:0,vz:0},messageUntil=0,announce='',center={x:0,y:0,z:7.5},cam={x:0,y:5.85,z:-8.3},basis=null;
- let shotViewDistance=9.85,lastSceneryAt=0,sceneryDirty=true,hasTakenShot=false,bankFlashUntil=0,cameraYaw=0,shotYaw=0,bankTipTimer=null;
+ let shotViewDistance=9.85,lastSceneryAt=0,sceneryDirty=true,hasTakenShot=false,bankFlashUntil=0,cameraYaw=0,shotYaw=0,bankTipTimer=null,resultTimer=null,resultShown=false;
  // Camera tracks a moving putt without zooming. Once it rests, the next-shot
  // view tightens automatically according to remaining distance to the cup.
  // Orient every settled next-shot view toward the cup, including overshoots.
@@ -178,8 +215,38 @@ function getAim(){
  const m=Math.hypot(sx,sz)||1,power=aimStrength(),speed=2.26+6.95*power;
  return {vx:sx/m*speed,vz:sz/m*speed,power};
 }
+// Stable mapping from strokes to par and golf terminology.
+function holeScore(putts,par=3){
+ const diff=putts-par;
+ const relative=diff===0?'E':diff>0?'+'+diff:String(diff);
+ const names={[-4]:'CONDOR',[-3]:'ALBATROSS',[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'};
+ const name=names[diff]||(diff<0?Math.abs(diff)+' UNDER PAR':diff+' OVER PAR');
+ return {putts,par,diff,relative,name,ace:putts===1};
+}
+function hideHoleResult(){
+ if(resultTimer!==null){clearTimeout(resultTimer);resultTimer=null}
+ $('holeResult').hidden=true;
+}
+function showHoleResult(){
+ resultTimer=null;
+ if(!holed||resultShown)return;
+ const score=holeScore(shots);
+ $('resultPutts').textContent=score.putts;
+ $('resultPar').textContent=score.par;
+ $('resultRelative').textContent=score.relative;
+ $('resultName').textContent=score.name;
+ $('resultDescription').textContent=score.ace?'Hole in one! What a roll.':'Your putt dropped. Nice roll.';
+ $('holeResult').hidden=false;
+ resultShown=true;
+ $('resultReplay').focus?.({preventScroll:true});
+}
+function scheduleHoleResult(){
+ if(resultTimer!==null)clearTimeout(resultTimer);
+ if(resultShown)return;
+ resultTimer=setTimeout(showHoleResult,420);
+}
 function updateUI(){const p=getAim();$('powerFill').style.width=`${Math.round(p?p.power*100:0)}%`;$('powerMeter').setAttribute('aria-valuenow',Math.round(p?p.power*100:0));$('strokes').textContent=shots;$('status').textContent=holed?'HOLED — NICE ROLL':moving?'BALL IN MOTION':aim?'AIM · RELEASE TO PUTT':'READY TO ROLL';$('status').classList.toggle('holed',holed);$('tip').classList.toggle('off',Boolean(aim)||moving||holed)}
-function reset(){shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;cameraYaw=shotYaw=0;setCamera();renderScenery();updateUI()}
+function reset(){hideHoleResult();resultShown=false;shots=0;moving=false;holed=false;ball={x:middle(1.55),z:1.55,vx:0,vz:0};aim=null;trailed=[];announce='';cam={x:0,y:5.85,z:-8.3};center={x:0,y:0,z:7.5};hasTakenShot=false;sceneryDirty=true;shotViewDistance=9.85;cameraYaw=shotYaw=0;setCamera();renderScenery();updateUI()}
 function physics(dt){if(!moving||holed)return;const g=gradient(ball.x,ball.z);const sp=Math.hypot(ball.vx,ball.vz);if(sp<.18){moving=false;ball.vx=ball.vz=0;updateUI();return}
 // Gravity projected onto the local green tangent + near-constant rolling resistance.
 const accX=-3.25*g.x-1.59*ball.vx/sp,accZ=-3.25*g.z-1.59*ball.vz/sp;
@@ -191,7 +258,7 @@ if(ball.x>right){ball.x=right;ball.vx=-Math.abs(ball.vx)*.65;ball.vz*=.92}
 const ox=ball.x-rock.x,oz=ball.z-rock.z,dist=Math.hypot(ox,oz),minD=rock.r+RADIUS;
 if(dist<minD){const nx=dist?ox/dist:1,nz=dist?oz/dist:0;ball.x=rock.x+nx*minD;ball.z=rock.z+nz*minD;const dotV=ball.vx*nx+ball.vz*nz;if(dotV<0){ball.vx-=1.58*dotV*nx;ball.vz-=1.58*dotV*nz}}
 const dc=Math.hypot(ball.x-cup.x,ball.z-cup.z),newSpeed=Math.hypot(ball.vx,ball.vz);
-if(dc<.23&&newSpeed<3.4){holed=true;moving=false;ball.x=cup.x;ball.z=cup.z;ball.vx=ball.vz=0;trailed=[];announce='NICE ROLL';$('tip').textContent='HOLED IN '+shots+(shots===1?' PUTT':' PUTTS');$('tip').classList.remove('off');updateUI();return}
+if(dc<.23&&newSpeed<3.4){holed=true;moving=false;ball.x=cup.x;ball.z=cup.z;ball.vx=ball.vz=0;trailed=[];announce='NICE ROLL';$('tip').textContent='HOLED IN '+shots+(shots===1?' PUTT':' PUTTS');$('tip').classList.remove('off');updateUI();scheduleHoleResult();return}
 if(trailed.length===0||Math.hypot(trailed.at(-1).x-ball.x,trailed.at(-1).z-ball.z)>.20){trailed.push({x:ball.x,z:ball.z});if(trailed.length>80)trailed.shift()}
 }
 function shoot(){const shot=getAim();aim=null;if(!shot){updateUI();return}ball.vx=shot.vx;ball.vz=shot.vz;shots++;shotViewDistance=clamp(Math.hypot(ball.x-cam.x,ball.z-cam.z),3.6,9.85);shotYaw=cameraYaw;hasTakenShot=true;moving=true;trailed=[];dismissBankTip();updateUI()}
@@ -201,6 +268,9 @@ canvas.addEventListener('pointermove',e=>{if(!aim||aim.id!==e.pointerId)return;c
 canvas.addEventListener('pointerup',e=>{if(!aim||aim.id!==e.pointerId)return;const p=locate(e);aim.dx=p.x-aim.startX;aim.dy=p.y-aim.startY;shoot()});
 canvas.addEventListener('pointercancel',()=>{aim=null;updateUI()});
 $('reset').addEventListener('click',()=>{$('tip').textContent='DRAG TO AIM · RELEASE TO PUTT';reset()});
+ $('resultReplay').addEventListener('click',()=>{$('tip').textContent='DRAG TO AIM · RELEASE TO PUTT';reset()});
+ $('resultDismiss').addEventListener('click',()=>{hideHoleResult();$('reset').focus?.({preventScroll:true})});
+ window.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('holeResult').hidden){event.preventDefault?.();hideHoleResult();$('reset').focus?.({preventScroll:true})}});
  function dismissBankTip(){if(bankTipTimer!==null){clearTimeout(bankTipTimer);bankTipTimer=null}$('bankIntro').hidden=true}
  $('dismissBankTip').addEventListener('click',dismissBankTip);
  bankTipTimer=setTimeout(dismissBankTip,6500);
@@ -210,7 +280,7 @@ function animate(now){const dt=Math.min(.05,(now-lastTime)/1000||0);lastTime=now
  updateCamera(dt);if(sceneryDirty&&(now-lastSceneryAt>42)){renderScenery();sceneryDirty=false;lastSceneryAt=now}
  render();requestAnimationFrame(animate)}
 // Lightweight hooks for browser-level regression tests; not used by gameplay UI.
-window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
+window.__gaTest={reset,getState:()=>({...ball,shots,moving,holed}),getGradient:(x,z)=>gradient(x,z),getHeight:(x,z)=>height(x,z),getCamera:()=>({cam:{...cam},center:{...center},hasTakenShot,cameraYaw,shotYaw}),getAimSpeed:power=>2.26+6.95*power,getCup:()=>({...cup}),getHoleScore:(putts,par=3)=>holeScore(putts,par),showHoleResult,hideHoleResult,getAim:()=>getAim(),getRenderBallVisible:()=>!holed,getBallScreen:()=>P(ball.x,ball.z,RADIUS+.035),getCupScreen:()=>P(cup.x,cup.z,.038),
  setBall:(x,z,vx,vz)=>{ball={x,z,vx,vz};moving=true;holed=false;trailed=[];hasTakenShot=true;shotYaw=cameraYaw},
  advance:(seconds)=>{for(let i=0;i<Math.floor(seconds*120);i++)physics(1/120)},updateCamera,
  frame:(seconds)=>{updateCamera(seconds);renderScenery();render()}};
