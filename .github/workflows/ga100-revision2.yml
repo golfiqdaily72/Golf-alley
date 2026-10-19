@@ -1,16 +1,21 @@
-name: GA-100 Revision 2 Regression Checks
+name: GA-100 2D and WebGL Regression Checks
 on:
   push:
     branches:
       - feature/ga-100-revision-2
+      - feature/ga-110-webgl-3d-vertical-slice
     paths:
       - playtest/ga-100/**
+      - playtest/ga-100-webgl/**
       - tests/ga100-revision2.test.cjs
+      - tests/ga100-webgl.test.cjs
       - .github/workflows/ga100-revision2.yml
   pull_request:
     paths:
       - playtest/ga-100/**
+      - playtest/ga-100-webgl/**
       - tests/ga100-revision2.test.cjs
+      - tests/ga100-webgl.test.cjs
       - .github/workflows/ga100-revision2.yml
   workflow_dispatch:
 jobs:
@@ -23,5 +28,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test physics and camera behavior
-        run: node --test tests/ga100-revision2.test.cjs
+      - name: Test existing 2D game and new WebGL terrain/physics
+        run: node --test tests/ga100-revision2.test.cjs tests/ga100-webgl.test.cjs
