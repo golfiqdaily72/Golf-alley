@@ -1,0 +1,26 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const html=fs.readFileSync(path.join(__dirname,'../playtest/ga-100-webgl/index.html'),'utf8');
+const script=html.match(/<script>([\s\S]*?)<\/script>/)?.[1];assert.ok(script);
+function boot(){
+ const events={},elements={};let count=0,bufferCount=0,drawCalls=0;
+ const gl={VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:1,LINK_STATUS:2,DEPTH_TEST:2929,LEQUAL:515,TRIANGLES:4,FLOAT:5126,ARRAY_BUFFER:34962,STATIC_DRAW:35044,COLOR_BUFFER_BIT:16384,DEPTH_BUFFER_BIT:256};
+ for(const n of ['shaderSource','compileShader','attachShader','linkProgram','useProgram','enable','depthFunc','bindBuffer','bufferData','viewport','uniformMatrix4fv','uniform3fv','enableVertexAttribArray','vertexAttribPointer','clearColor','clear'])gl[n]=()=>{};
+ gl.createShader=()=>({});gl.getShaderParameter=()=>true;gl.createProgram=()=>({});gl.getProgramParameter=()=>true;gl.getAttribLocation=(_,name)=>({aPos:0,aNorm:1,aCol:2,aGrass:3}[name]??0);gl.getUniformLocation=()=>({});gl.createBuffer=()=>{bufferCount++;return {}};gl.drawArrays=(_,__,ct)=>{count+=ct;drawCalls++};
+ const ctx={clearRect(){},beginPath(){},setLineDash(){},moveTo(){},lineTo(){},stroke(){}};
+ function el(id){if(!elements[id])elements[id]={id,hidden:id==='result'||id==='loading',style:{},classList:{toggle(){},add(){},remove(){}},textContent:'',setAttribute(){},focus(){},addEventListener:(type,fn)=>{events[id+':'+type]=fn},getBoundingClientRect:()=>({width:390,height:570,left:0,top:0}),setPointerCapture(){}};return elements[id]}
+ el('scene');el('result');el('bankTip');el('glCanvas');el('aimCanvas');
+ el('glCanvas').getContext=(kind)=>kind==='webgl'?gl:null;el('aimCanvas').getContext=()=>ctx;
+ let callback=null,seq=0;const timers=new Map();const requestAnimationFrame=fn=>{callback=fn};
+ const window={devicePixelRatio:1,addEventListener:(name,fn)=>events['window:'+name]=fn},document={getElementById:el};
+ const setTimeout=(fn,ms)=>{let id=++seq;timers.set(id,{fn,ms});return id},clearTimeout=id=>timers.delete(id);
+ vm.runInNewContext(script,{window,document,requestAnimationFrame,setTimeout,clearTimeout,performance:{now:()=>0},alert(){}},{timeout:10000,filename:'game.js'});
+ return {game:window.__ga3d,events,elements,timers,render:(t=16)=>{if(callback)callback(t)},stats:()=>({bufferCount,drawCalls,vertices:count})};
+}
+test('Genuine GPU geometry is uploaded and WebGL render loop dispatches meshes',()=>{const a=boot();assert.equal(a.game.available,true);assert.match(a.game.engine,/WebGL/);assert.ok(a.stats().bufferCount>=6);a.render();assert.ok(a.stats().drawCalls>=6);assert.ok(a.stats().vertices>50000)});
+test('Bounded green has an organic rounded cap with cup safely before end',()=>{const g=boot().game,END=g.getGreenEnd();assert.equal(END,19);assert.ok(g.getCup().z<END-1.0);assert.ok(g.getGreenWidth(17.9)>g.getGreenWidth(18.6));assert.ok(g.getGreenWidth(18.6)>0);assert.ok(Math.abs(g.getGreenWidth(END))<.001)});
+test('Same terrain governs consistent break and deterministic physics',()=>{const g=boot().game,s=g.getState(),from={x:s.x,z:s.z},grad=g.getGradient(s.x,s.z);assert.ok(Number.isFinite(grad.x)&&Number.isFinite(grad.z));g.setBall(from.x,from.z,0,4);for(let i=0;i<120;i++)g.step(1/120);const a=g.getState();assert.ok(Math.abs(a.x-from.x)>.005);g.reset();g.setBall(from.x,from.z,0,4);for(let i=0;i<120;i++)g.step(1/120);const b=g.getState();assert.ok(Math.abs(a.x-b.x)<1e-10&&Math.abs(a.z-b.z)<1e-10)});
+test('Optional left bank gives consistent rebound',()=>{const g=boot().game,z=8,mid=.5*Math.sin(z*.25+.55)-.25*Math.sin(z*.49),x=mid-g.getGreenWidth(z)+.19;g.setBall(x,z,-2,.8);for(let i=0;i<28;i++)g.step(1/120);assert.ok(g.getState().vx>0)});
+test('Touch pullback can putt backwards and reset restores play',()=>{const a=boot(),e=(x,y)=>({clientX:x,clientY:y,pointerId:1}),start=a.game.getState();a.events['glCanvas:pointerdown'](e(195,300));a.events['glCanvas:pointermove'](e(195,210));a.events['glCanvas:pointerup'](e(195,210));assert.equal(a.game.getState().shots,1);assert.equal(a.game.getState().moving,true);assert.ok(a.game.getState().vz<0);a.game.reset();assert.equal(a.game.getState().shots,0);assert.ok(Math.abs(a.game.getState().z-start.z)<1e-5)});
+test('Completion dialog shows earned score and replay restores ball',()=>{const a=boot(),g=a.game,c=g.getCup(),e=(x,y)=>({clientX:x,clientY:y,pointerId:1});a.events['glCanvas:pointerdown'](e(180,340));a.events['glCanvas:pointermove'](e(180,430));a.events['glCanvas:pointerup'](e(180,430));g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);assert.equal(g.getState().holed,true);const timer=[...a.timers.values()].find(x=>x.ms===430);assert.ok(timer);timer.fn();assert.equal(a.elements.result.hidden,false);assert.equal(a.elements.resultName.textContent,'EAGLE');a.events['playAgain:click']();assert.equal(g.getState().shots,0);assert.equal(g.getState().holed,false);assert.equal(a.elements.result.hidden,true)});
+test('Roll It. brand, responsive controls and dialog preserved',()=>{assert.match(html,/>ROLL IT\.</);assert.match(html,/Drag and release in any direction/);assert.match(html,/role="dialog"/);assert.doesNotMatch(html,/ROLL IT SMOOTH/i)});
