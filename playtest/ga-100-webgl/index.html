@@ -82,6 +82,9 @@ const height=(x,z)=>.19*Math.sin(z*.35+.3)+.19*Math.sin(.77*x+.19*z)+.055*x*Math
 const grad=(x,z)=>{const e=.022;return {x:(height(x+e,z)-height(x-e,z))/(2*e),z:(height(x,z+e)-height(x,z-e))/(2*e)}};
 const ground=(x,z)=>height(x,z)-.23-.045*Math.abs(x-mid(z))+.09*Math.sin(x*.3+z*.25)*Math.cos(x*.22);
 const cup={x:mid(FINAL_Z)+.23,z:FINAL_Z};
+// Golf ball (42.67 mm) to cup (108 mm) diameter ratio: 0.395.
+const BALL_RADIUS=.086,CUP_RADIUS=.216,FLAG_RADIUS=.023;
+let pinRebounds=0;
 const state={ball:{x:mid(1.55),z:1.55,vx:0,vz:0},shots:0,moving:false,holed:false,aim:null,cameraYaw:0,shotYaw:0,hasPutt:false,tipSeen:false};
 const meshes=[];
 function geo(){return {pos:[],norm:[],col:[],grass:[]}}
@@ -122,6 +125,24 @@ for(let i=0;i<16;i++){const z=6.1+i*.26,zz=z+.26;
  quad(details,[a(z),height(a(z),z)+.03,z],[a(z)-.19,height(a(z),z)+.36,z],[a(zz)-.19,height(a(zz),zz)+.36,zz],[a(zz),height(a(zz),zz)+.03,zz],rgb(180+(i%3)*5,148+(i%4)*4,104),0);
  quad(details,[a(z)-.19,height(a(z),z)+.36,z],[a(z)-.36,height(a(z),z)+.24,z],[a(zz)-.36,height(a(zz),zz)+.24,zz],[a(zz)-.19,height(a(zz),zz)+.36,zz],rgb(208,176,127),0);
 }
+// Layered scene dressing stays beyond the playable turf.
+for(let i=0;i<34;i++){
+ const z=.7+(i%17)*1.14,side=i%2?1:-1,x=mid(z)+side*(baseWidth(z)+1.3+(i%4)*.43),y=ground(x,z),scale=.12+(i%5)*.036;
+ ballShape(landscape,x,y+scale*.45,z,scale,rgb(92+(i%3)*11,125+(i%4)*8,67+(i%2)*9),4,6);
+ ballShape(landscape,x+side*scale,y+scale*.42,z+.11,scale*.74,rgb(62,105+(i%3)*9,57),4,6);
+}
+for(let i=0;i<20;i++){
+ const z=1.7+i*1.7,side=i%2?1:-1,x=mid(z)+side*(baseWidth(z)+2.25+(i%3)*.65),y=ground(x,z),r=.22+(i%4)*.065;
+ ballShape(landscape,x,y+r*.35,z,r,rgb(154+(i%3)*8,145+(i%4)*5,116),4,7);
+ ballShape(landscape,x+side*.16,y+r*.43,z+.12,r*.7,rgb(116+(i%2)*11,119,101),4,6);
+}
+// Additional distant hills introduce depth without obstructing the cup.
+for(let ridge=0;ridge<3;ridge++){
+ const farZ=31+ridge*13,baseY=-.42-ridge*.25,shade=[rgb(95,130,104),rgb(114,137,108),rgb(131,148,119)][ridge];
+ for(let i=0;i<35;i++){const x=-38+i*2.2,xx=x+2.2,h=1.4+.72*Math.sin(i*.68+ridge)+.43*Math.sin(i*1.43+ridge*2);
+  tri(landscape,[x,baseY,farZ],[xx,baseY,farZ],[x+1.1,baseY+h,farZ-.8],shade);
+ }
+}
 // Sand hazard is outside the playable green, with multiple layers of real geometry.
 function sandDisk(cx,cz,r1,r2,color){const steps=24;for(let i=0;i<steps;i++){let t=i*2*PI/steps,t2=(i+1)*2*PI/steps,p=(r,ang)=>[cx+r1*r*Math.cos(ang),ground(cx+r1*r*Math.cos(ang),cz+r2*r*Math.sin(ang),)+.033,cz+r2*r*Math.sin(ang)];tri(details,[cx,ground(cx,cz)+.038,cz],p(1,t),p(1,t2),color)}}
 sandDisk(mid(13.4)+baseWidth(13.4)+1.0,13.4,1.30,2.1,rgb(193,181,137));
@@ -129,13 +150,13 @@ sandDisk(mid(13.4)+baseWidth(13.4)+1.05,13.4,.95,1.66,rgb(226,210,163));
 // Flag cup and flagstick are proper 3D meshes.
 const cy=height(cup.x,cup.z)+.045;
 const cupDark=rgb(22,45,30),cupRim=rgb(231,232,207);
-for(let i=0;i<22;i++){const a=i*PI*2/22,b=(i+1)*PI*2/22,p=(r,t,y)=>[cup.x+r*Math.cos(t),cy+y,cup.z+r*Math.sin(t)];tri(details,p(0,a,-.003),p(.175,a,-.003),p(.175,b,-.003),cupDark);quad(details,p(.172,a,-.005),p(.216,a,.009),p(.216,b,.009),p(.172,b,-.005),cupRim)}
-tube(flagGeo,cup.x,cy,cup.z,.023,1.92,rgb(242,240,219),10);
+for(let i=0;i<22;i++){const a=i*PI*2/22,b=(i+1)*PI*2/22,p=(r,t,y)=>[cup.x+r*Math.cos(t),cy+y,cup.z+r*Math.sin(t)];tri(details,p(0,a,-.003),p(CUP_RADIUS*.81,a,-.003),p(CUP_RADIUS*.81,b,-.003),cupDark);quad(details,p(CUP_RADIUS*.8,a,-.005),p(CUP_RADIUS,a,.009),p(CUP_RADIUS,b,.009),p(CUP_RADIUS*.8,b,-.005),cupRim)}
+tube(flagGeo,cup.x,cy,cup.z,FLAG_RADIUS,1.92,rgb(242,240,219),10);
 const RED=rgb(214,42,54),FOLD=rgb(166,27,40);
 quad(flagGeo,[cup.x,cy+1.91,cup.z],[cup.x+.63,cy+1.80,cup.z+.035],[cup.x+.58,cy+1.41,cup.z+.16],[cup.x,cy+1.49,cup.z],RED);
 tri(flagGeo,[cup.x+.63,cy+1.80,cup.z+.035],[cup.x+.82,cy+1.70,cup.z+.06],[cup.x+.58,cy+1.41,cup.z+.16],FOLD);
 const sphere=geo();ballShape(sphere,0,0,0,1,rgb(245,248,230),12,16);
-const shadow=geo();for(let i=0;i<20;i++){let a=i*PI*2/20,b=(i+1)*PI*2/20;tri(shadow,[0,0,0],[.20*Math.cos(a),0,.20*Math.sin(a)],[.20*Math.cos(b),0,.20*Math.sin(b)],rgb(61,91,69));}
+const shadow=geo();for(let i=0;i<20;i++){let a=i*PI*2/20,b=(i+1)*PI*2/20;tri(shadow,[0,0,0],[BALL_RADIUS*1.3*Math.cos(a),0,BALL_RADIUS*1.3*Math.sin(a)],[BALL_RADIUS*1.3*Math.cos(b),0,BALL_RADIUS*1.3*Math.sin(b)],rgb(61,91,69));}
 function upload(g){if(!g.pos.length)return null;const packed=new Float32Array(g.pos.length/3*10);for(let i=0;i<g.pos.length/3;i++){packed.set(g.pos.slice(i*3,i*3+3),i*10);packed.set(g.norm.slice(i*3,i*3+3),i*10+3);packed.set(g.col.slice(i*3,i*3+3),i*10+6);packed[i*10+9]=g.grass[i];}const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STATIC_DRAW);return {buffer,count:packed.length/10}}
 for(const obj of [rough,details,landscape,green,flagGeo])meshes.push(upload(obj));const ballMesh=upload(sphere),shadowMesh=upload(shadow);
 function bind(mesh){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);for(const [attribute,offset,length] of [[loc.p,0,3],[loc.n,12,3],[loc.c,24,3],[loc.g,36,1]]){gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,length,gl.FLOAT,false,40,offset)}}
@@ -149,17 +170,25 @@ const aimCtx=aimCanvas.getContext('2d');
 function aimStrength(){return clamp(Math.hypot(state.aim?.dx||0,state.aim?.dy||0)/155,0,1)}
 function aimVector(){if(!state.aim)return null;const {dx,dy}=state.aim,l=Math.hypot(dx,dy);if(l<14)return null;const xR=Math.cos(camera.yaw),zR=-Math.sin(camera.yaw),xF=Math.sin(camera.yaw),zF=Math.cos(camera.yaw);const sx=-dx*xR+dy*xF,sz=-dx*zR+dy*zF,m=Math.hypot(sx,sz)||1;const p=aimStrength(),speed=2.26+6.95*p;return {vx:speed*sx/m,vz:speed*sz/m,p}}
 function renderAim(){aimCtx.clearRect(0,0,widthPx,heightPx);const a=aimVector();el('powerFill').style.width=((a?.p||0)*100).toFixed(0)+'%';if(!a||state.moving||state.holed)return;aimCtx.strokeStyle='rgba(255,255,227,.85)';aimCtx.lineWidth=Math.max(2,widthPx/220);aimCtx.setLineDash([7,11]);aimCtx.beginPath();let first=true;for(let i=0;i<=27;i++){const t=i/27*2.9,x=state.ball.x+a.vx*t,z=state.ball.z+a.vz*t,p=project(x,height(x,z)+.085,z);if(!p)continue;if(first){aimCtx.moveTo(p[0],p[1]);first=false}else aimCtx.lineTo(p[0],p[1])}aimCtx.stroke();aimCtx.setLineDash([])}
-function render(){gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);viewProj=mul(perspective(54*rad,widthPx/heightPx,.1,160),lookAt(camera.eye,camera.look));gl.uniformMatrix4fv(loc.vp,false,viewProj);gl.uniform3fv(loc.eye,new Float32Array(camera.eye));for(const mesh of meshes)draw(mesh);if(!state.holed){const b=state.ball;draw(shadowMesh,translation(b.x,height(b.x,b.z)+.036,b.z));draw(ballMesh,translation(b.x,height(b.x,b.z)+.177,b.z,.149))}renderAim()}
+function render(){gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);viewProj=mul(perspective(54*rad,widthPx/heightPx,.1,160),lookAt(camera.eye,camera.look));gl.uniformMatrix4fv(loc.vp,false,viewProj);gl.uniform3fv(loc.eye,new Float32Array(camera.eye));for(const mesh of meshes)draw(mesh);if(!state.holed){const b=state.ball;draw(shadowMesh,translation(b.x,height(b.x,b.z)+.036,b.z));draw(ballMesh,translation(b.x,height(b.x,b.z)+.028+BALL_RADIUS,b.z,BALL_RADIUS))}renderAim()}
 function score(){const d=state.shots-3,names={[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'};return {name:names[d]||(d>3?d+' OVER PAR':'UNDER PAR'),putts:state.shots,toPar:d===0?'E':d>0?'+'+d:String(d)}}
 let completionTimer=null,tipTimer=null;
 function presentScore(){completionTimer=null;if(!state.holed)return;const s=score();el('resultName').textContent=s.name;el('resultPutts').textContent=s.putts;el('resultToPar').textContent=s.toPar;el('result').hidden=false;el('playAgain').focus({preventScroll:true})}
 function holeOut(){state.holed=true;state.moving=false;state.ball.vx=0;state.ball.vz=0;state.ball.x=cup.x;state.ball.z=cup.z;el('status').textContent='HOLE COMPLETE';completionTimer=setTimeout(presentScore,430)}
 function step(dt){if(!state.moving||state.holed)return;const b=state.ball,sp=Math.hypot(b.vx,b.vz);if(sp<.16){state.moving=false;b.vx=b.vz=0;el('status').textContent='READY TO PUTT';return}const g=grad(b.x,b.z);b.vx+=(-3.25*g.x-1.60*b.vx/sp)*dt;b.vz+=(-3.25*g.z-1.60*b.vz/sp)*dt;b.x+=b.vx*dt;b.z+=b.vz*dt;
+ // Every edge keeps the ball on the green: there is no out-of-bounds.
  b.z=clamp(b.z,.25,END-.23);if(b.z===.25||b.z===END-.23)b.vz*=-.48;
- const edge=width(b.z)-.15,left=mid(b.z)-edge,right=mid(b.z)+edge;
+ const edge=Math.max(BALL_RADIUS+.035,width(b.z)-BALL_RADIUS-.035),left=mid(b.z)-edge,right=mid(b.z)+edge;
  if(b.x<left){b.x=left;b.vx=Math.abs(b.vx)*(b.z>6&&b.z<10.2?.68:.24);b.vz*=.87}
  if(b.x>right){b.x=right;b.vx=-Math.abs(b.vx)*.24;b.vz*=.87}
- const dist=Math.hypot(b.x-cup.x,b.z-cup.z),velocity=Math.hypot(b.vx,b.vz);if(dist<.23&&velocity<3.4)holeOut();}
+ const dx=b.x-cup.x,dz=b.z-cup.z,dist=Math.hypot(dx,dz),velocity=Math.hypot(b.vx,b.vz),captureRadius=CUP_RADIUS-BALL_RADIUS*.7,captureSpeed=2.45;
+ // A well-paced putt drops. Contact with the flagstick at high speed ricochets.
+ if(dist<captureRadius&&velocity<=captureSpeed){holeOut();return}
+ if(dist<FLAG_RADIUS+BALL_RADIUS&&velocity>captureSpeed){
+  const nx=dist>.0001?dx/dist:-b.vx/(velocity||1),nz=dist>.0001?dz/dist:-b.vz/(velocity||1),incoming=b.vx*nx+b.vz*nz;
+  if(incoming<0){const bounce=1.58*incoming;b.vx-=bounce*nx;b.vz-=bounce*nz;b.x=cup.x+nx*(FLAG_RADIUS+BALL_RADIUS+.006);b.z=cup.z+nz*(FLAG_RADIUS+BALL_RADIUS+.006);pinRebounds++;el('status').textContent='PIN HIT · TOO MUCH POWER'}
+ }
+}
 function dismissTip(){el('bankTip').hidden=true;if(tipTimer!==null){clearTimeout(tipTimer);tipTimer=null}}
 function shoot(){const a=aimVector();state.aim=null;if(!a||state.holed){el('status').textContent='READY TO PUTT';return;}state.ball.vx=a.vx;state.ball.vz=a.vz;state.shots++;state.moving=true;state.hasPutt=true;state.shotYaw=camera.yaw;el('strokes').textContent=state.shots;el('status').textContent='BALL IN MOTION';dismissTip()}
 function reset(){if(completionTimer!==null)clearTimeout(completionTimer);completionTimer=null;el('result').hidden=true;state.ball={x:mid(1.55),z:1.55,vx:0,vz:0};state.moving=false;state.holed=false;state.aim=null;state.shots=0;state.hasPutt=false;camera.yaw=0;camera.behind=7.8;camera.eye=[0,5.9,-8.0];camera.look=[0,.4,7.8];el('strokes').textContent='0';el('status').textContent='READY TO ROLL';el('powerFill').style.width='0%'}
@@ -173,7 +202,7 @@ el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\n\nPull b
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('result').hidden)el('result').hidden=true});window.addEventListener('resize',resize);
 resize();let last=performance.now(),acc=0;function animate(now){const dt=Math.min((now-last)/1000,.05);last=now;acc+=dt;let runs=0;while(acc>=1/120&&runs++<7){step(1/120);acc-=1/120}updateCamera(dt);render();requestAnimationFrame(animate)}requestAnimationFrame(animate);
 tipTimer=setTimeout(dismissTip,7000);
-window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
+window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
 })();
 </script>
 </body></html>
