@@ -132,3 +132,29 @@ test('GA-112 retains skill-only physics and mobile power/aim controls',()=>{
  assert.equal(g.getState().shots,1);
  assert.equal(g.getState().moving,true);
 });
+
+
+test('GA-113 defines nine unique and playable greens with correct pars',()=>{
+ const a=boot(),g=a.game,holes=g.getHoles(),checks=[];
+ assert.equal(holes.length,9);
+ assert.equal(new Set(holes.map(h=>h.name)).size,9);
+ assert.ok(holes.some(h=>h.par===4)&&holes.some(h=>h.par===3));
+ for(let i=0;i<9;i++){
+  assert.equal(g.selectHole(i),true);
+  assert.equal(g.getHoleIndex(),i);
+  assert.equal(g.getGreenEnd(),holes[i].length);
+  const c=g.getCup();assert.ok(Number.isFinite(c.x)&&Number.isFinite(c.z));
+  checks.push([c.x,c.z,g.getHeight(0,8)].map(n=>n.toFixed(3)).join(':'));
+  assert.equal(a.elements.holePar.textContent,holes[i].par);
+ }
+ assert.equal(new Set(checks).size,9);
+ assert.equal(g.selectHole(9),false);
+});
+
+test('GA-113 changing holes releases old GPU buffers',()=>{
+ const a=boot(),base=a.stats().bufferCount;
+ a.game.selectHole(1);
+ assert.ok(a.stats().deletedBuffers>=base);
+ assert.ok(a.stats().bufferCount>=base*2);
+ a.render();assert.ok(a.stats().drawCalls>=8);
+});
