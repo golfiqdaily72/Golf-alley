@@ -295,12 +295,25 @@ function renderAim(){aimCtx.clearRect(0,0,widthPx,heightPx);const a=aimVector(),
  const tip=pts[pts.length-1],before=pts[pts.length-2],dx=tip[0]-before[0],dy=tip[1]-before[1],l=Math.hypot(dx,dy)||1,ux2=dx/l,uy2=dy/l,size=Math.max(8,widthPx/56);
  aimCtx.beginPath();aimCtx.moveTo(tip[0]-ux2*size-uy2*size*.55,tip[1]-uy2*size+ux2*size*.55);aimCtx.lineTo(tip[0],tip[1]);aimCtx.lineTo(tip[0]-ux2*size+uy2*size*.55,tip[1]-uy2*size-ux2*size*.55);aimCtx.stroke();}
 function render(){gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);viewProj=mul(perspective(54*rad,widthPx/heightPx,.1,160),lookAt(camera.eye,camera.look));gl.uniformMatrix4fv(loc.vp,false,viewProj);gl.uniform3fv(loc.eye,new Float32Array(camera.eye));for(const mesh of meshes)draw(mesh);if(!state.holed){const b=state.ball;draw(shadowMesh,translation(b.x,height(b.x,b.z)+.036,b.z));draw(ballMesh,translation(b.x,height(b.x,b.z)+.028+BALL_RADIUS,b.z,BALL_RADIUS))}renderAim()}
-function score(){const d=state.shots-3,names={[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'},name=names[d]||(d>3?d+' OVER PAR':'UNDER PAR');
+function score(){const d=state.shots-hole().par,names={[-3]:'ALBATROSS',[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'},name=names[d]||(d>3?d+' OVER PAR':'UNDER PAR');
  const message=state.shots===1?'AWESOME HOLE IN ONE!':d===-1?'GREAT BIRDIE!':d===0?'NICE PAR!':name;
- return {name,message,putts:state.shots,toPar:d===0?'E':d>0?'+'+d:String(d)}}
+ return {name,message,putts:state.shots,toPar:toParText(d),par:hole().par,hole:holeIndex+1}}
 let completionTimer=null,tipTimer=null,holeIntroTimer=null;
-function presentScore(){completionTimer=null;if(!state.holed)return;const s=score();el('resultName').textContent=s.name;el('resultTitle').textContent=s.message;el('resultPutts').textContent=s.putts;el('resultToPar').textContent=s.toPar;el('result').hidden=false;el('playAgain').focus({preventScroll:true})}
-function holeOut(){state.holed=true;state.moving=false;state.ball.vx=0;state.ball.vz=0;state.ball.x=cup.x;state.ball.z=cup.z;el('status').textContent='HOLE COMPLETE';completionTimer=setTimeout(presentScore,430)}
+function presentScore(){completionTimer=null;if(!state.holed)return;const s=score(),end=holeIndex===HOLES.length-1,t=roundTotals();
+ el('resultName').textContent=s.name;
+ el('resultTitle').textContent=end?'ROUND COMPLETE!':s.message;
+ el('resultPutts').textContent=s.putts;el('resultPar').textContent=s.par;
+ el('resultToPar').textContent=s.toPar;
+ el('resultLabel').textContent='HOLE '+String(holeIndex+1).padStart(2,'0')+' · '+hole().name.toUpperCase();
+ el('roundSummary').textContent='ROUND '+t.toPar+' · '+t.strokes+' PUTTS · '+t.completed+'/9 HOLES';
+ el('playAgain').textContent=end?'PLAY AGAIN ↻':'NEXT HOLE →';
+ el('advanceHole').textContent=end?'↻ RESTART ROUND':'NEXT HOLE →';
+ el('result').hidden=false;el('playAgain').focus({preventScroll:true})}
+function holeOut(){if(state.holed)return;state.holed=true;state.moving=false;state.ball.vx=0;state.ball.vz=0;state.ball.x=cup.x;state.ball.z=cup.z;
+ roundScores[holeIndex]=state.shots;updateScorecard();
+ el('advanceHole').hidden=false;
+ el('status').textContent=holeIndex===HOLES.length-1?'ROUND COMPLETE':'HOLE COMPLETE';
+ completionTimer=setTimeout(presentScore,430)}
 function step(dt){if(!state.moving||state.holed)return;const b=state.ball,sp=Math.hypot(b.vx,b.vz);if(sp<.16){state.moving=false;b.vx=b.vz=0;el('status').textContent='READY TO PUTT';return}const g=grad(b.x,b.z);b.vx+=(-3.25*g.x-1.60*b.vx/sp)*dt;b.vz+=(-3.25*g.z-1.60*b.vz/sp)*dt;b.x+=b.vx*dt;b.z+=b.vz*dt;
  // Every edge keeps the ball on the green: there is no out-of-bounds.
  b.z=clamp(b.z,.25,END-.23);if(b.z===.25||b.z===END-.23)b.vz*=-.48;
@@ -317,18 +330,81 @@ function step(dt){if(!state.moving||state.holed)return;const b=state.ball,sp=Mat
 }
 function dismissTip(){el('bankTip').hidden=true;if(tipTimer!==null){clearTimeout(tipTimer);tipTimer=null}}
 function shoot(){const a=aimVector();state.aim=null;el('holeIntro').hidden=true;if(!a||state.holed){el('status').textContent='READY TO PUTT';return;}state.ball.vx=a.vx;state.ball.vz=a.vz;state.shots++;state.moving=true;state.hasPutt=true;state.shotYaw=camera.yaw;el('strokes').textContent=state.shots;el('status').textContent='BALL IN MOTION';dismissTip()}
-function reset(){if(completionTimer!==null)clearTimeout(completionTimer);completionTimer=null;el('result').hidden=true;pinRebounds=0;el('holeIntro').hidden=false;if(holeIntroTimer!==null)clearTimeout(holeIntroTimer);holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);state.ball={x:mid(1.55),z:1.55,vx:0,vz:0};state.moving=false;state.holed=false;state.aim=null;state.shots=0;state.hasPutt=false;camera.yaw=0;camera.behind=7.8;camera.eye=[0,5.9,-8.0];camera.look=[0,.4,7.8];el('strokes').textContent='0';el('status').textContent='READY TO ROLL';el('powerFill').style.height='0%';el('powerPercent').textContent='0%'}
+function reset(){if(completionTimer!==null)clearTimeout(completionTimer);completionTimer=null;
+ roundScores[holeIndex]=null;el('result').hidden=true;el('advanceHole').hidden=true;
+ pinRebounds=0;el('holeIntro').hidden=false;if(holeIntroTimer!==null)clearTimeout(holeIntroTimer);
+ holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
+ state.ball={x:mid(1.55),z:1.55,vx:0,vz:0};state.moving=false;state.holed=false;state.aim=null;state.shots=0;state.hasPutt=false;
+ camera.yaw=0;camera.behind=7.8;camera.eye=[0,5.9,-8.0];camera.look=[0,.4,7.8];
+ el('strokes').textContent='0';el('status').textContent='READY TO ROLL';
+ el('powerFill').style.height='0%';el('powerPercent').textContent='0%';
+ updateScorecard()}
+
+function updateScorecard(){
+ const t=roundTotals();
+ el('roundTotal').textContent=t.toPar;
+ el('scoreProgress').textContent=t.completed+' / 9 COMPLETE';
+ el('scoreTotal').textContent=t.strokes+' PUTTS · '+t.toPar;
+ el('scorecard').innerHTML=HOLES.map((h,i)=>{
+  const n=roundScores[i],cls=n!==null?'done':i===holeIndex?'active':'';
+  const label=n===null?(i===holeIndex?'PLAYING':'—'):n+' · '+toParText(n-h.par);
+  return '<div class="score-tile '+cls+'"><small>HOLE '+String(i+1).padStart(2,'0')+' · PAR '+h.par+'</small><strong>'+label+'</strong></div>';
+ }).join('');
+}
+
+function syncHoleUI(){
+ const h=hole(),i=String(holeIndex+1).padStart(2,'0');
+ el('holeNumber').textContent='HOLE '+i+' OF 09 · THE FOUNDERS NINE';
+ el('holeName').textContent=h.name;el('holePar').textContent=h.par;
+ el('introName').textContent='HOLE '+i+' · '+h.name.toUpperCase();
+ el('introPar').textContent='PAR '+h.par;
+ el('courseInscription').textContent='FOUNDERS NINE · HOLE '+i;
+ el('panelHole').textContent=h.name+'.';
+ el('courseTheme').textContent='THE FOUNDERS NINE / '+h.theme.toUpperCase();
+ el('holeTip').textContent='QUICK TIP · '+h.tip;
+ el('resultPar').textContent=h.par;
+ el('bankTip').hidden=false;
+ if(tipTimer!==null)clearTimeout(tipTimer);
+ tipTimer=setTimeout(dismissTip,7000);
+ const skies=[
+  'linear-gradient(180deg,#7daebd,#b8d0c0 43%,#53764f)',
+  'linear-gradient(180deg,#82a7bd,#dbc39a 45%,#9d8a65)',
+  'linear-gradient(180deg,#8caebf,#b2c4b9 44%,#617f79)',
+  'linear-gradient(180deg,#74acc4,#c9d6c0 44%,#5b8b80)',
+  'linear-gradient(180deg,#92a7b0,#d5bd93 46%,#8d7857)',
+  'linear-gradient(180deg,#78bbcd,#c7d4bf 44%,#478a84)',
+  'linear-gradient(180deg,#83a3bc,#c3c4b9 45%,#70887f)',
+  'linear-gradient(180deg,#83bbaf,#c4cfb4 45%,#60866a)',
+  'linear-gradient(180deg,#98b8c0,#d8c9ad 45%,#5f8066)'
+ ];
+ scene.style.background=skies[holeIndex];
+ updateScorecard();
+}
+function selectHole(index){
+ if(!Number.isInteger(index)||index<0||index>=HOLES.length)return false;
+ holeIndex=index;END=hole().length;SHOULDER=END-1.25;FINAL_Z=END-1.9;
+ cup.x=mid(FINAL_Z)+hole().cupOffset;cup.z=FINAL_Z;
+ buildHoleScene();reset();syncHoleUI();return true;
+}
+function nextHole(){if(!state.holed)return false;if(holeIndex===HOLES.length-1){restartRound();return true}return selectHole(holeIndex+1)}
+function restartRound(){roundScores.fill(null);selectHole(0)}
+
 function touchPos(e){const box=canvas.getBoundingClientRect();return {x:e.clientX-box.left,y:e.clientY-box.top}}
 canvas.addEventListener('pointerdown',e=>{if(state.moving||state.holed)return;const p=touchPos(e);state.aim={startX:p.x,startY:p.y,dx:0,dy:0,id:e.pointerId};el('powerRail').classList.toggle('left',p.x>canvas.getBoundingClientRect().width/2);canvas.setPointerCapture(e.pointerId);el('status').textContent='RELEASE TO PUTT'});
 canvas.addEventListener('pointermove',e=>{if(!state.aim||e.pointerId!==state.aim.id)return;const p=touchPos(e);state.aim.dx=p.x-state.aim.startX;state.aim.dy=p.y-state.aim.startY;});
 canvas.addEventListener('pointerup',e=>{if(!state.aim||e.pointerId!==state.aim.id)return;const p=touchPos(e);state.aim.dx=p.x-state.aim.startX;state.aim.dy=p.y-state.aim.startY;shoot()});
 canvas.addEventListener('pointercancel',()=>{state.aim=null;el('status').textContent='READY TO PUTT'});
-el('closeTip').addEventListener('click',dismissTip);el('reset').addEventListener('click',reset);el('playAgain').addEventListener('click',reset);el('viewGreen').addEventListener('click',()=>{el('result').hidden=true;el('reset').focus({preventScroll:true})});
-el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\n\nHOLE 01 · PAR 3. Pull back opposite your intended shot direction, then release. You can aim in any direction.\n\nUphill slows the ball, downhill speeds it up, and side slopes make it turn. The ball always stays on the green; the edges bounce it back into play. A hard hit on the flagstick may ricochet away. Aim for a controlled pace to sink it.\n\nAfter the ball stops, the camera moves toward your next shot.'));
+el('closeTip').addEventListener('click',dismissTip);
+el('reset').addEventListener('click',reset);
+el('playAgain').addEventListener('click',nextHole);
+el('advanceHole').addEventListener('click',nextHole);
+el('restartRound').addEventListener('click',restartRound);
+el('viewGreen').addEventListener('click',()=>{el('result').hidden=true;el('advanceHole').focus({preventScroll:true})});
+el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\\n\\nTHE FOUNDERS NINE · 9 HOLES. Pull back opposite your shot direction, then release. Aim in any direction.\\n\\nUphill slows the ball, downhill speeds it up, and side slopes curve your putt. The ball always stays on the green. Hard pin hits ricochet. A gentle approach drops.\\n\\nAfter each completed hole, tap Next Hole. Your round total and +/- par are tracked across all nine holes.'));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('result').hidden)el('result').hidden=true});window.addEventListener('resize',resize);
 resize();let last=performance.now(),acc=0;function animate(now){const dt=Math.min((now-last)/1000,.05);last=now;acc+=dt;let runs=0;while(acc>=1/120&&runs++<7){step(1/120);acc-=1/120}updateCamera(dt);render();requestAnimationFrame(animate)}requestAnimationFrame(animate);
-tipTimer=setTimeout(dismissTip,7000);holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
-window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-112 environment art pass',getLandscapeAnchors:()=>({bunker:{...bunkerAnchor},pond:{...pondAnchor}}),step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
+syncHoleUI();holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
+window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-113 nine-hole round',getLandscapeAnchors:()=>({bunker:{...bunkerAnchor},pond:{...pondAnchor}}),getHoles:()=>HOLES.map(h=>({...h})),getHoleIndex:()=>holeIndex,getRound:()=>({hole:holeIndex+1,scores:roundScores.slice(),...roundTotals()}),nextHole,selectHole,restartRound,step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
 })();
 </script>
 </body></html>
