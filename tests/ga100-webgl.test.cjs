@@ -189,3 +189,23 @@ test('GA-113 plays all nine holes and completes an accurate full round',()=>{
  assert.ok(g.getRound().scores.every(n=>n===null));
  assert.equal(a.elements.holeIntro.hidden,false);
 });
+
+
+test('GA-113 par four birdie, running total and restart-round control',()=>{
+ const a=boot(),g=a.game,e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+ g.selectHole(2);assert.equal(g.getHoles()[2].par,4);
+ for(let i=0;i<3;i++){
+  a.events['glCanvas:pointerdown'](e(180,340));
+  a.events['glCanvas:pointermove'](e(180,430));
+  a.events['glCanvas:pointerup'](e(180,430));
+  if(i<2){const pos=g.getState();g.setBall(pos.x,pos.z,.1,0);g.step(1/120)}
+ }
+ assert.equal(g.score().message,'GREAT BIRDIE!');
+ const c=g.getCup();g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);
+ assert.equal(g.getRound().scores[2],3);
+ assert.equal(g.getRound().toPar,'-1');
+ a.events['restartRound:click']();
+ assert.equal(g.getHoleIndex(),0);
+ assert.equal(g.getRound().completed,0);
+ assert.equal(a.elements.scoreTotal.textContent,'0 PUTTS · E');
+});
