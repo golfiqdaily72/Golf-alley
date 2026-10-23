@@ -80,5 +80,55 @@ test('Par introduction displays on start and reset, then clears on the first put
 });
 test('Richer decorative scenery exists outside the playable corridor',()=>{
  assert.match(script,/Layered scene dressing stays beyond the playable turf/);
- assert.match(script,/Additional distant hills introduce depth/);
+ assert.match(script,/continuous, overlapping mountain\/woodland ribbons/);
+});
+
+
+test('GA-112 premium environment uploads a distinct pond mesh and retains the WebGL rendering path',()=>{
+ const a=boot();
+ assert.equal(a.game.getSceneVersion(),'GA-112 environment art pass');
+ assert.ok(a.stats().bufferCount>=8,'terrain, grass, scenery, pond, flag and ball meshes should be uploaded');
+ a.render();
+ assert.ok(a.stats().drawCalls>=8);
+ assert.ok(a.stats().vertices>55000);
+});
+
+test('GA-112 bunker and pond landmarks stay outside the playable green along their full outlines',()=>{
+ const g=boot().game,anchors=g.getLandscapeAnchors();
+ assert.ok(anchors.bunker&&anchors.pond);
+ const mid=z=>.5*Math.sin(z*.25+.55)-.25*Math.sin(z*.49);
+ for(const anchor of Object.values(anchors)){
+  for(let i=-12;i<=12;i++){
+   const ratio=i/12,z=anchor.z+ratio*anchor.rz*1.28;
+   const x=anchor.x-anchor.rx*1.35*Math.sqrt(Math.max(0,1-ratio*ratio));
+   assert.ok(x>mid(z)+g.getGreenWidth(z)+.13,'landmark must never obscure playable surface');
+  }
+ }
+});
+
+test('GA-112 scenery uses coherent ridgelines, atmosphere and distinct terrain materials',()=>{
+ assert.match(script,/continuous, overlapping mountain\/woodland ribbons/);
+ assert.match(script,/for\(let ridge=2;ridge>=0;ridge--\)/);
+ assert.match(script,/warm directional light, soft sky fill/);
+ assert.match(script,/float fog=smoothstep\(27\.,85\.,dist\)/);
+ assert.match(script,/function bunker\(/);
+ assert.match(script,/function pond\(/);
+ assert.match(script,/getLandscapeAnchors/);
+ assert.doesNotMatch(script,/disconnected triangular spikes\.[\s\S]*tri\(landscape,\[x,baseY,farZ\]/);
+});
+
+test('GA-112 retains skill-only physics and mobile power/aim controls',()=>{
+ const a=boot(),g=a.game,e=(x,y)=>({clientX:x,clientY:y,pointerId:5});
+ assert.match(script,/const height=\(x,z\)=>/);
+ assert.match(script,/const grad=\(x,z\)=>/);
+ assert.match(script,/function step\(dt\)/);
+ assert.match(html,/class="power-rail"/);
+ assert.match(script,/i\/12\*1\.65/);
+ a.events['glCanvas:pointerdown'](e(320,300));
+ a.events['glCanvas:pointermove'](e(320,375));
+ a.render();
+ assert.ok(parseInt(a.elements.powerPercent.textContent,10)>0);
+ a.events['glCanvas:pointerup'](e(320,375));
+ assert.equal(g.getState().shots,1);
+ assert.equal(g.getState().moving,true);
 });
