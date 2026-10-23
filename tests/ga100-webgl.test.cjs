@@ -80,7 +80,7 @@ test('Par introduction displays on start and reset, then clears on the first put
 });
 test('Richer decorative scenery exists outside the playable corridor',()=>{
  assert.match(script,/Layered scene dressing stays beyond the playable turf/);
- assert.match(script,/Additional distant hills introduce depth/);
+ assert.match(script,/continuous, overlapping mountain\/woodland ribbons/);
 });
 
 
