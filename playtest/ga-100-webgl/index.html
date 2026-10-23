@@ -140,9 +140,22 @@ function buildHoleScene(){
  for(const m of [...meshes,ballMesh,shadowMesh])if(m&&gl.deleteBuffer)gl.deleteBuffer(m.buffer);
  meshes.length=0;
  const rough=geo(),green=geo(),details=geo(),landscape=geo(),waterGeo=geo(),flagGeo=geo();
+ // Each hole receives a restrained turf/environment palette; gameplay surface stays visually prominent.
+ const palettes=[
+  {rough:[75,118,76],green:[100,169,100],trees:[46,88,52]},
+  {rough:[121,116,80],green:[121,155,88],trees:[75,103,59]},
+  {rough:[83,120,107],green:[94,164,105],trees:[38,91,67]},
+  {rough:[84,135,118],green:[101,180,111],trees:[44,109,88]},
+  {rough:[136,117,82],green:[131,157,85],trees:[82,102,56]},
+  {rough:[78,137,123],green:[108,179,109],trees:[42,110,82]},
+  {rough:[87,111,112],green:[101,161,104],trees:[51,91,81]},
+  {rough:[83,125,85],green:[110,179,105],trees:[47,98,57]},
+  {rough:[90,129,91],green:[108,173,104],trees:[48,97,61]}
+ ];
+ const palette=palettes[holeIndex];
 
 // Rolling distant terrain rendered as actual depth-tested triangles.
-for(let zi=0;zi<77;zi++){const z=-18+zi*.97,zz=z+.97;for(let xi=0;xi<75;xi++){const x=-36+xi*.96,xx=x+.96;const color=rgb(75,118,76).map(v=>v*(1+variation(x,z,1.15)));quad(rough,[x,ground(x,z),z],[xx,ground(xx,z),z],[xx,ground(xx,zz),zz],[x,ground(x,zz),zz],color,.20)}}
+for(let zi=0;zi<77;zi++){const z=-18+zi*.97,zz=z+.97;for(let xi=0;xi<75;xi++){const x=-36+xi*.96,xx=x+.96;const color=rgb(...palette.rough).map(v=>v*(1+variation(x,z,1.15)));quad(rough,[x,ground(x,z),z],[xx,ground(xx,z),z],[xx,ground(xx,zz),zz],[x,ground(x,zz),zz],color,.20)}}
 // Short-grass fringe is a separate, bounded 3D ring. It closes at the same z as the green.
 for(let i=0;i<125;i++){const z=.08+(END-.08)*i/125,zz=.08+(END-.08)*(i+1)/125;for(const side of [-1,1]){
  const ins=z=>mid(z)+side*width(z),outs=z=>mid(z)+side*outerWidth(z),v=variation(side*3,z,.32);
@@ -153,7 +166,7 @@ const nz=170,nx=28;
 for(let zi=0;zi<nz;zi++){const z=.08+zi*(END-.08)/nz,zz=.08+(zi+1)*(END-.08)/nz;for(let xi=0;xi<nx;xi++){
  const u=-1+xi*2/nx,uu=-1+(xi+1)*2/nx,x=mid(z)+u*width(z),xx=mid(z)+uu*width(z),x2=mid(zz)+u*width(zz),xx2=mid(zz)+uu*width(zz);
  const g=grad(x,z),light=clamp(1-.20*g.x-.16*g.z,.92,1.08),mow=(Math.floor(z*.57)%2===0?.020:-.019),v=variation(x,z,.35);
- const c=rgb(100,169,100).map(vv=>clamp(vv*(light+mow+v),0,1));
+ const c=rgb(...palette.green).map(vv=>clamp(vv*(light+mow+v),0,1));
  quad(green,[x,height(x,z)+.028,z],[xx,height(xx,z)+.028,z],[xx2,height(xx2,zz)+.028,zz],[x2,height(x2,zz)+.028,zz],c,1);
 }}
 function tube(g,x,y,z,r,heightVal,color,sides=8){for(let j=0;j<sides;j++){let a=j*2*PI/sides,b=(j+1)*2*PI/sides,p=(angle,h)=>[x+r*Math.cos(angle),y+h,z+r*Math.sin(angle)];quad(g,p(a,0),p(b,0),p(b,heightVal),p(a,heightVal),color)}}
@@ -163,13 +176,13 @@ for(let i=0;i<30;i++){
  const z=1.5+i*1.26,side=i%2===0?1:-1,x=mid(z)+side*(baseWidth(z)+3.7+(i%5)*.82),y=ground(x,z),size=.76+(i%7)*.115;
  const wood=rgb(88+(i%3)*5,84+(i%2)*5,62);
  tube(landscape,x,y,z,.067*size,1.68*size,wood,7);
- ballShape(landscape,x,y+1.65*size,z,.67*size,rgb(46+(i%3)*10,88+(i%3)*8,52+(i%2)*6),6,9);
+ ballShape(landscape,x,y+1.65*size,z,.67*size,rgb(palette.trees[0]+(i%3)*10,palette.trees[1]+(i%3)*8,palette.trees[2]+(i%2)*6),6,9);
  ballShape(landscape,x-.35*size,y+1.88*size,z+.12*size,.53*size,rgb(79,127+(i%3)*5,69),6,9);
  ballShape(landscape,x+.33*size,y+2.03*size,z-.19*size,.52*size,rgb(48,103+(i%4)*7,55),6,9);
  ballShape(landscape,x-.05*size,y+2.37*size,z-.03*size,.38*size,rgb(66+(i%3)*7,116,62),5,8);
 }
 // Natural stone bank provides ONE optional skill-based alternate route.
-for(let i=0;i<16;i++){const z=6.1+i*.26,zz=z+.26;
+for(let i=0;i<16;i++){const z=holeIndex===0?6.1+i*.26:4.8+(holeIndex%4)*1.05+i*.26,zz=z+.26;
  const a=z=>mid(z)-width(z)+.035;
  quad(details,[a(z),height(a(z),z)+.03,z],[a(z)-.19,height(a(z),z)+.36,z],[a(zz)-.19,height(a(zz),zz)+.36,zz],[a(zz),height(a(zz),zz)+.03,zz],rgb(180+(i%3)*5,148+(i%4)*4,104),0);
  quad(details,[a(z)-.19,height(a(z),z)+.36,z],[a(z)-.36,height(a(z),z)+.24,z],[a(zz)-.36,height(a(zz),zz)+.24,zz],[a(zz)-.19,height(a(zz),zz)+.36,zz],rgb(208,176,127),0);
@@ -300,7 +313,7 @@ function score(){const d=state.shots-hole().par,names={[-3]:'ALBATROSS',[-2]:'EA
  return {name,message,putts:state.shots,toPar:toParText(d),par:hole().par,hole:holeIndex+1}}
 let completionTimer=null,tipTimer=null,holeIntroTimer=null;
 function presentScore(){completionTimer=null;if(!state.holed)return;const s=score(),end=holeIndex===HOLES.length-1,t=roundTotals();
- el('resultName').textContent=s.name;
+ el('resultName').textContent=end?s.message:s.name;el('resultName').hidden=false;
  el('resultTitle').textContent=end?'ROUND COMPLETE!':s.message;
  el('resultPutts').textContent=s.putts;el('resultPar').textContent=s.par;
  el('resultToPar').textContent=s.toPar;
