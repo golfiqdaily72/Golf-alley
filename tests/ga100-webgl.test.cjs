@@ -158,3 +158,34 @@ test('GA-113 changing holes releases old GPU buffers',()=>{
  assert.ok(a.stats().bufferCount>=base*2);
  a.render();assert.ok(a.stats().drawCalls>=8);
 });
+
+
+test('GA-113 plays all nine holes and completes an accurate full round',()=>{
+ const a=boot(),g=a.game,e=(x,y)=>({clientX:x,clientY:y,pointerId:7});
+ assert.equal(a.elements.scorecard.innerHTML.match(/score-tile/g).length,9);
+ for(let i=0;i<9;i++){
+  assert.equal(g.getHoleIndex(),i);
+  assert.equal(a.elements.holePar.textContent,g.getHoles()[i].par);
+  a.events['glCanvas:pointerdown'](e(190,310));
+  a.events['glCanvas:pointermove'](e(190,400));
+  a.events['glCanvas:pointerup'](e(190,400));
+  const c=g.getCup();g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);
+  assert.equal(g.getState().holed,true);
+  assert.equal(g.getRound().completed,i+1);
+  assert.equal(g.getRound().scores[i],1);
+  assert.equal(g.getRound().strokes,i+1);
+  const timer=[...a.timers.values()].filter(t=>t.ms===430).at(-1);
+  assert.ok(timer);timer.fn();
+  assert.equal(a.elements.playAgain.textContent,i===8?'PLAY AGAIN ↻':'NEXT HOLE →');
+  if(i===8){
+   assert.equal(a.elements.resultTitle.textContent,'ROUND COMPLETE!');
+   assert.ok(a.elements.roundSummary.textContent.includes('9/9 HOLES'));
+  }
+  assert.equal(g.nextHole(),true);
+ }
+ assert.equal(g.getHoleIndex(),0);
+ assert.equal(g.getRound().completed,0);
+ assert.equal(g.getRound().strokes,0);
+ assert.ok(g.getRound().scores.every(n=>n===null));
+ assert.equal(a.elements.holeIntro.hidden,false);
+});
