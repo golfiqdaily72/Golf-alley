@@ -33,18 +33,36 @@
 .hole-intro small{display:block;font-size:9px;color:#cdec9f;letter-spacing:.35px;font-weight:750}
 .green-rule{position:absolute;z-index:2;left:50%;bottom:11px;transform:translateX(-50%);border-radius:12px;padding:5px 9px;max-width:75%;text-align:center;white-space:normal;background:#113b2dd4;color:#def4ba;box-shadow:0 2px 10px #132c2870;font-size:9px;font-weight:850;letter-spacing:.35px;pointer-events:none}
 @media(max-width:440px){.power-rail{bottom:62px;width:39px;right:8px;padding:8px 4px}.power-rail.left{left:8px}.power-track{height:96px;width:11px}.green-rule{font-size:8px}}
+/* GA-113: round score tracking remains legible at narrow phone widths. */
+.hud{grid-template-columns:minmax(0,1.3fr) .53fr .53fr .65fr}
+.hud .stat{min-width:0}.hud .stat strong.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hud .stat:not(:first-child){padding-left:9px}
+.scoreboard{border-top:1px solid #ffffff2c;padding-top:17px;margin-top:22px}
+.scoreboard-heading,.score-total{display:flex;align-items:center;justify-content:space-between;gap:7px;color:#e9f6d7;font-size:11px;letter-spacing:.8px}
+.scoreboard-heading span,.score-total span{font-size:9px;color:#a4beaa}
+.scorecard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}
+.score-tile{display:flex;flex-direction:column;gap:4px;border:1px solid #6384645a;border-radius:9px;padding:9px 7px;background:#1d3d2c;font-size:10px;min-width:0}
+.score-tile.active{border-color:#d4e999;background:#284f37}
+.score-tile.done{background:#30523b}
+.score-tile small{font-size:8px;color:#b9d1b4;letter-spacing:.4px}
+.score-tile strong{font-size:12px;white-space:nowrap}
+.score-total{border-top:1px solid #ffffff25;padding-top:11px}
+.follow-actions{margin-top:8px}.follow-actions button[hidden]{display:none}
+.round-summary{font-size:10px;color:#d3e9ac;margin:9px 0;letter-spacing:.6px}
+@media(max-width:440px){.stat strong{font-size:18px}.stat strong.name{font-size:14px}.hud{padding:9px 5px 12px;gap:4px}.hud .stat:not(:first-child){padding-left:7px}.stat label{font-size:8px;letter-spacing:.45px}}
+
 </style>
 </head>
 <body>
-<div class="shell"><nav class="nav"><div><div class="brand">GOLF <span>ALLEY</span></div><span class="tag">ROLL IT.</span></div><div class="build">GA-112 · ENVIRONMENT STUDY</div></nav>
-<section class="heading"><div><div class="eyebrow">THE GREEN EXPERIENCE / ENGINE STUDY</div><h1>A new dimension.<br><em>Same great roll.</em></h1><p>One sculpted, fully 3D putting green. Read the break. Own the pace.</p></div><div class="subheading">FIRST-HOLE PLAYTEST<br>SKILL FIRST · BANKING OPTIONAL</div></section>
+<div class="shell"><nav class="nav"><div><div class="brand">GOLF <span>ALLEY</span></div><span class="tag">ROLL IT.</span></div><div class="build">GA-113 · NINE-HOLE 3D PLAYTEST</div></nav>
+<section class="heading"><div><div class="eyebrow">THE GREEN EXPERIENCE / ENGINE STUDY</div><h1>A new dimension.<br><em>Same great roll.</em></h1><p>Nine sculpted 3D greens. Read the break. Own the pace. Roll It.</p></div><div class="subheading">NINE-HOLE ROUND<br>SKILL FIRST · BANKING OPTIONAL</div></section>
 <div class="layout"><section class="game" aria-label="Golf Alley 3D putting prototype">
-<div class="hud"><div class="stat"><label>HOLE 01 · THE FOUNDERS NINE</label><strong class="name">The Bend</strong></div><div class="stat"><label>PAR</label><strong>3</strong></div><div class="stat"><label>PUTTS</label><strong id="strokes">0</strong></div></div>
-<div class="tip" id="bankTip"><div><b>QUICK TIP</b> · Pull opposite your shot direction to putt. Watch the slopes; the left sandstone edge offers an optional bank.</div><button type="button" id="closeTip" aria-label="Dismiss tutorial">×</button></div>
-<div class="scene" id="scene"><canvas id="glCanvas" aria-label="Interactive three-dimensional putting green. Drag and release in any direction to putt."></canvas><canvas id="aimCanvas" aria-hidden="true"></canvas><div class="power-rail" id="powerRail" aria-label="Putt power indicator"><span>POWER</span><div class="power-track"><div class="power-fill" id="powerFill"></div></div><strong id="powerPercent">0%</strong></div><div class="hole-intro" id="holeIntro" role="status"><span>HOLE 01 · THE BEND</span><strong>PAR 3</strong><small>THE BALL ALWAYS STAYS ON THE GREEN</small></div><div class="green-rule">GREEN-ONLY PLAY · NO OUT OF BOUNDS</div><div class="inscription">FOUNDERS NINE · HOLE 01</div><div class="inscription right">TRUE 3D · STUDY</div><div class="loading" id="loading" hidden>Loading the golf green…</div>
-<div class="result" id="result" role="dialog" aria-modal="true" aria-labelledby="resultTitle" hidden><div class="result-card"><div class="result-label">THE BEND · HOLE 01</div><h3 id="resultTitle">HOLE COMPLETE</h3><div class="result-outcome" id="resultName" hidden>PAR</div><div class="result-scores"><div>PUTTS<strong id="resultPutts">3</strong></div><div>PAR<strong>3</strong></div><div>TO PAR<strong id="resultToPar">E</strong></div></div><div class="result-buttons"><button type="button" id="viewGreen">VIEW GREEN</button><button type="button" class="primary" id="playAgain">PLAY AGAIN ↻</button></div></div></div></div>
+<div class="hud"><div class="stat"><label id="holeNumber">HOLE 01 OF 09 · THE FOUNDERS NINE</label><strong class="name" id="holeName">The Bend</strong></div><div class="stat"><label>PAR</label><strong id="holePar">3</strong></div><div class="stat"><label>PUTTS</label><strong id="strokes">0</strong></div><div class="stat"><label>ROUND</label><strong id="roundTotal">E</strong></div></div>
+<div class="tip" id="bankTip"><div id="holeTip"><b>QUICK TIP</b> · Pull opposite your shot direction to putt. Watch the slopes; the left sandstone edge offers an optional bank.</div><button type="button" id="closeTip" aria-label="Dismiss tutorial">×</button></div>
+<div class="scene" id="scene"><canvas id="glCanvas" aria-label="Interactive three-dimensional putting green. Drag and release in any direction to putt."></canvas><canvas id="aimCanvas" aria-hidden="true"></canvas><div class="power-rail" id="powerRail" aria-label="Putt power indicator"><span>POWER</span><div class="power-track"><div class="power-fill" id="powerFill"></div></div><strong id="powerPercent">0%</strong></div><div class="hole-intro" id="holeIntro" role="status"><span id="introName">HOLE 01 · THE BEND</span><strong id="introPar">PAR 3</strong><small>THE BALL ALWAYS STAYS ON THE GREEN</small></div><div class="green-rule">GREEN-ONLY PLAY · NO OUT OF BOUNDS</div><div class="inscription" id="courseInscription">FOUNDERS NINE · HOLE 01</div><div class="inscription right">TRUE 3D · STUDY</div><div class="loading" id="loading" hidden>Loading the golf green…</div>
+<div class="result" id="result" role="dialog" aria-modal="true" aria-labelledby="resultTitle" hidden><div class="result-card"><div class="result-label" id="resultLabel">THE BEND · HOLE 01</div><h3 id="resultTitle">HOLE COMPLETE</h3><div class="result-outcome" id="resultName" hidden>PAR</div><div class="result-scores"><div>PUTTS<strong id="resultPutts">3</strong></div><div>PAR<strong id="resultPar">3</strong></div><div>TO PAR<strong id="resultToPar">E</strong></div></div><div class="round-summary" id="roundSummary" aria-live="polite">ROUND E · 0/9 FINISHED</div><div class="result-buttons"><button type="button" id="viewGreen">VIEW GREEN</button><button type="button" class="primary" id="playAgain">NEXT HOLE →</button></div></div></div></div>
 <div class="under"><div class="status"><span class="lamp"></span><span id="status">READY TO ROLL</span></div></div></section>
-<aside class="panel"><div class="eyebrow">THE GREEN EXPERIENCE / V0.2</div><h2>The Bend.</h2><p>The entire playing area is a putting green. Your ball cannot roll off: the edges gently bounce it back into play. Pick a line, judge your power, and use the slopes to reach the cup. Bank shots are optional.</p><div class="features"><div class="feature"><span class="icon">◒</span><div><strong>True 3D terrain</strong>Real triangles, depth, perspective, shadows and lighting. Not a flat image projected to look dimensional.</div></div><div class="feature"><span class="icon">∿</span><div><strong>See how slopes change your putt</strong>Uphill putts slow down, downhill putts pick up speed, and side slopes make the ball curve. Your line and power determine the result.</div></div><div class="feature"><span class="icon">⌁</span><div><strong>Find your line</strong>A direct route rewards a good read. Optional sandstone banking offers an alternate approach.</div></div></div><div class="buttons"><button class="primary" type="button" id="reset">↺ RESET HOLE</button><button type="button" id="help">HOW TO PLAY</button></div><div class="preview"><strong>PLAYTEST · NOT A REPLACEMENT</strong>This upgraded WebGL environment remains isolated from the existing one-hole canvas preview and the original nine-hole game. Test the visual quality, green break, camera and controls before choosing a final engine.</div></aside></div><footer class="foot">GOLF ALLEY · ROLL IT. &nbsp; | &nbsp; ENGINE VALIDATION BUILD</footer></div>
+<aside class="panel"><div class="eyebrow" id="courseTheme">THE FOUNDERS NINE / PARKLAND</div><h2 id="panelHole">The Bend.</h2><p>The entire playing area is a putting green. Your ball cannot roll off: the edges gently bounce it back into play. Pick a line, judge your power, and use the slopes to reach the cup. Bank shots are optional.</p><div class="features"><div class="feature"><span class="icon">◒</span><div><strong>True 3D terrain</strong>Real triangles, depth, perspective, shadows and lighting. Not a flat image projected to look dimensional.</div></div><div class="feature"><span class="icon">∿</span><div><strong>See how slopes change your putt</strong>Uphill putts slow down, downhill putts pick up speed, and side slopes make the ball curve. Your line and power determine the result.</div></div><div class="feature"><span class="icon">⌁</span><div><strong>Find your line</strong>A direct route rewards a good read. Optional sandstone banking offers an alternate approach.</div></div></div><div class="scoreboard"><div class="scoreboard-heading"><strong>THE FOUNDERS NINE</strong><span id="scoreProgress">0 / 9 COMPLETE</span></div><div id="scorecard" class="scorecard" aria-label="Nine hole scorecard"></div><div class="score-total"><span>ROUND TOTAL</span><strong id="scoreTotal">0 PUTTS · E</strong></div></div><div class="buttons"><button class="primary" type="button" id="reset">↺ RESET HOLE</button><button type="button" id="help">HOW TO PLAY</button></div><div class="buttons follow-actions"><button type="button" id="advanceHole" hidden>NEXT HOLE →</button><button type="button" id="restartRound">↻ RESTART ROUND</button></div><div class="preview"><strong>PLAYTEST · NOT A REPLACEMENT</strong>This standalone WebGL nine-hole round remains separate from the original nine-hole browser game and 2D preview. Validate gameplay, art, and mobile performance before choosing the final engine.</div></aside></div><footer class="foot">GOLF ALLEY · ROLL IT. &nbsp; | &nbsp; ENGINE VALIDATION BUILD</footer></div>
 <script>
 (()=>{'use strict';
 const el=id=>document.getElementById(id),canvas=el('glCanvas'),aimCanvas=el('aimCanvas'),scene=el('scene');
@@ -78,30 +96,66 @@ function lookAt(eye,target){const z=unit(minus(eye,target)),x=unit(cross([0,1,0]
 function mul(a,b){const c=new Float32Array(16);for(let col=0;col<4;col++)for(let row=0;row<4;row++){let v=0;for(let k=0;k<4;k++)v+=a[k*4+row]*b[col*4+k];c[col*4+row]=v}return c}
 function translation(x,y,z,s=1){return new Float32Array([s,0,0,0,0,s,0,0,0,0,s,0,x,y,z,1])}
 const ID=translation(0,0,0);
-const mid=z=>.50*Math.sin(z*.25+.55)-.25*Math.sin(z*.49);
-const END=19.0,SHOULDER=17.75,FINAL_Z=17.1;
+// GA-113: nine deterministic green profiles, with individual shape, break and visual personality.
+const HOLES=[
+ {name:'The Bend',par:3,length:19,bend:0,phase:0,width:0,tilt:0,rise:0,cupOffset:.23,theme:'Parkland',tip:'Read the side slope. The left sandstone bank is an optional shortcut.'},
+ {name:'Canyon Run',par:3,length:21,bend:.92,phase:.1,width:-.18,tilt:.085,rise:.035,cupOffset:-.35,theme:'Desert',tip:'The narrowing right turn rewards controlled pace.'},
+ {name:'The Switchback',par:4,length:23,bend:-1.20,phase:1.4,width:-.12,tilt:-.065,rise:-.040,cupOffset:.22,theme:'Alpine',tip:'A sweeping reverse break sets up your next approach.'},
+ {name:'Cypress Point',par:3,length:18,bend:.62,phase:2.1,width:.05,tilt:.105,rise:-.010,cupOffset:-.24,theme:'Coastal',tip:'Take the high line, then let the slope bring it back.'},
+ {name:'Sandstone S',par:4,length:24,bend:1.38,phase:3.0,width:-.20,tilt:-.095,rise:.020,cupOffset:.18,theme:'Desert',tip:'Two bends reward smart positioning over brute force.'},
+ {name:'Lakeside',par:3,length:20,bend:-.73,phase:.7,width:.16,tilt:.045,rise:-.050,cupOffset:.36,theme:'Resort',tip:'The decorative lake is outside the playable green; follow the contour.'},
+ {name:'The Ridge',par:4,length:25,bend:1.06,phase:1.9,width:-.28,tilt:.12,rise:.055,cupOffset:-.12,theme:'Mountain',tip:'A narrow approach favors patient speed control.'},
+ {name:'Double Break',par:3,length:20.5,bend:-1.15,phase:3.6,width:-.08,tilt:-.12,rise:.015,cupOffset:.31,theme:'Parkland',tip:'Watch the ball change direction as it passes the ridge.'},
+ {name:'Homeward',par:4,length:23.5,bend:.85,phase:4.4,width:.08,tilt:.07,rise:.030,cupOffset:-.28,theme:'Clubhouse',tip:'Finish strong. Banking is optional; a clean line also works.'}
+];
+let holeIndex=0;
+const hole=()=>HOLES[holeIndex];
+const mid=z=>.50*Math.sin(z*.25+.55)-.25*Math.sin(z*.49)+hole().bend*Math.sin(z*.25+hole().phase)*Math.sin(PI*clamp(z/hole().length,0,1));
+
+let END=19.0,SHOULDER=17.75,FINAL_Z=17.1;
 const taper=z=>{let t=clamp((z-SHOULDER)/(END-SHOULDER),0,1);return Math.sqrt(Math.max(0,1-t*t))};
-const baseWidth=z=>2.34+.17*Math.sin(z*.53)+.10*z/18;
+const baseWidth=z=>2.34+.17*Math.sin(z*.53)+.10*z/18+hole().width;
 const width=z=>baseWidth(z)*taper(z);
 const outerWidth=z=>(baseWidth(z)+.72)*taper(z);
-const height=(x,z)=>.19*Math.sin(z*.35+.3)+.19*Math.sin(.77*x+.19*z)+.055*x*Math.sin(z*.44)-.02*(z-8)+.022*Math.sin(x*1.3+z*.5);
+const height=(x,z)=>.19*Math.sin(z*.35+.3)+.19*Math.sin(.77*x+.19*z)+.055*x*Math.sin(z*.44)-.02*(z-8)+.022*Math.sin(x*1.3+z*.5)+hole().tilt*x+hole().rise*(z-8);
 const grad=(x,z)=>{const e=.022;return {x:(height(x+e,z)-height(x-e,z))/(2*e),z:(height(x,z+e)-height(x,z-e))/(2*e)}};
 const ground=(x,z)=>height(x,z)-.23-.045*Math.abs(x-mid(z))+.09*Math.sin(x*.3+z*.25)*Math.cos(x*.22);
 const cup={x:mid(FINAL_Z)+.23,z:FINAL_Z};
+const roundScores=Array(HOLES.length).fill(null);
+function toParText(n){return n===0?'E':n>0?'+'+n:String(n)}
+function roundTotals(){const completed=roundScores.map((n,i)=>n===null?null:{n,par:HOLES[i].par}).filter(Boolean);const strokes=completed.reduce((a,v)=>a+v.n,0),par=completed.reduce((a,v)=>a+v.par,0);return {completed:completed.length,strokes,par,toPar:toParText(strokes-par)}}
 // Golf ball (42.67 mm) to cup (108 mm) diameter ratio: 0.395.
 const BALL_RADIUS=.086,CUP_RADIUS=.216,FLAG_RADIUS=.023;
 let pinRebounds=0;
 const state={ball:{x:mid(1.55),z:1.55,vx:0,vz:0},shots:0,moving:false,holed:false,aim:null,cameraYaw:0,shotYaw:0,hasPutt:false,tipSeen:false};
-const meshes=[];
+const meshes=[];let ballMesh=null,shadowMesh=null,bunkerAnchor=null,pondAnchor=null;
 function geo(){return {pos:[],norm:[],col:[],grass:[]}}
 function vertex(g,p,n,c,grass){g.pos.push(...p);g.norm.push(...n);g.col.push(...c);g.grass.push(grass||0)}
 function tri(g,a,b,c,color,grass=0){let n=unit(cross(minus(b,a),minus(c,a)));if(n[1]<0)n=n.map(v=>-v);vertex(g,a,n,color,grass);vertex(g,b,n,color,grass);vertex(g,c,n,color,grass)}
 function quad(g,a,b,c,d,color,grass=0){tri(g,a,b,c,color,grass);tri(g,a,c,d,color,grass)}
 const rgb=(r,g,b)=>[r/255,g/255,b/255];
 function variation(x,z,scale=1){return Math.sin(x*3.21+z*6.14)*.045*scale+Math.sin(x*9.7-z*3.7)*.026*scale}
-const rough=geo(),green=geo(),details=geo(),landscape=geo(),waterGeo=geo(),flagGeo=geo();
+function buildHoleScene(){
+ // Release buffers for the previous hole. One WebGL context and one animation loop.
+ for(const m of [...meshes,ballMesh,shadowMesh])if(m&&gl.deleteBuffer)gl.deleteBuffer(m.buffer);
+ meshes.length=0;
+ const rough=geo(),green=geo(),details=geo(),landscape=geo(),waterGeo=geo(),flagGeo=geo();
+ // Each hole receives a restrained turf/environment palette; gameplay surface stays visually prominent.
+ const palettes=[
+  {rough:[75,118,76],green:[100,169,100],trees:[46,88,52]},
+  {rough:[121,116,80],green:[121,155,88],trees:[75,103,59]},
+  {rough:[83,120,107],green:[94,164,105],trees:[38,91,67]},
+  {rough:[84,135,118],green:[101,180,111],trees:[44,109,88]},
+  {rough:[136,117,82],green:[131,157,85],trees:[82,102,56]},
+  {rough:[78,137,123],green:[108,179,109],trees:[42,110,82]},
+  {rough:[87,111,112],green:[101,161,104],trees:[51,91,81]},
+  {rough:[83,125,85],green:[110,179,105],trees:[47,98,57]},
+  {rough:[90,129,91],green:[108,173,104],trees:[48,97,61]}
+ ];
+ const palette=palettes[holeIndex];
+
 // Rolling distant terrain rendered as actual depth-tested triangles.
-for(let zi=0;zi<77;zi++){const z=-18+zi*.97,zz=z+.97;for(let xi=0;xi<75;xi++){const x=-36+xi*.96,xx=x+.96;const color=rgb(75,118,76).map(v=>v*(1+variation(x,z,1.15)));quad(rough,[x,ground(x,z),z],[xx,ground(xx,z),z],[xx,ground(xx,zz),zz],[x,ground(x,zz),zz],color,.20)}}
+for(let zi=0;zi<77;zi++){const z=-18+zi*.97,zz=z+.97;for(let xi=0;xi<75;xi++){const x=-36+xi*.96,xx=x+.96;const color=rgb(...palette.rough).map(v=>v*(1+variation(x,z,1.15)));quad(rough,[x,ground(x,z),z],[xx,ground(xx,z),z],[xx,ground(xx,zz),zz],[x,ground(x,zz),zz],color,.20)}}
 // Short-grass fringe is a separate, bounded 3D ring. It closes at the same z as the green.
 for(let i=0;i<125;i++){const z=.08+(END-.08)*i/125,zz=.08+(END-.08)*(i+1)/125;for(const side of [-1,1]){
  const ins=z=>mid(z)+side*width(z),outs=z=>mid(z)+side*outerWidth(z),v=variation(side*3,z,.32);
@@ -112,7 +166,7 @@ const nz=170,nx=28;
 for(let zi=0;zi<nz;zi++){const z=.08+zi*(END-.08)/nz,zz=.08+(zi+1)*(END-.08)/nz;for(let xi=0;xi<nx;xi++){
  const u=-1+xi*2/nx,uu=-1+(xi+1)*2/nx,x=mid(z)+u*width(z),xx=mid(z)+uu*width(z),x2=mid(zz)+u*width(zz),xx2=mid(zz)+uu*width(zz);
  const g=grad(x,z),light=clamp(1-.20*g.x-.16*g.z,.92,1.08),mow=(Math.floor(z*.57)%2===0?.020:-.019),v=variation(x,z,.35);
- const c=rgb(100,169,100).map(vv=>clamp(vv*(light+mow+v),0,1));
+ const c=rgb(...palette.green).map(vv=>clamp(vv*(light+mow+v),0,1));
  quad(green,[x,height(x,z)+.028,z],[xx,height(xx,z)+.028,z],[xx2,height(xx2,zz)+.028,zz],[x2,height(x2,zz)+.028,zz],c,1);
 }}
 function tube(g,x,y,z,r,heightVal,color,sides=8){for(let j=0;j<sides;j++){let a=j*2*PI/sides,b=(j+1)*2*PI/sides,p=(angle,h)=>[x+r*Math.cos(angle),y+h,z+r*Math.sin(angle)];quad(g,p(a,0),p(b,0),p(b,heightVal),p(a,heightVal),color)}}
@@ -122,13 +176,13 @@ for(let i=0;i<30;i++){
  const z=1.5+i*1.26,side=i%2===0?1:-1,x=mid(z)+side*(baseWidth(z)+3.7+(i%5)*.82),y=ground(x,z),size=.76+(i%7)*.115;
  const wood=rgb(88+(i%3)*5,84+(i%2)*5,62);
  tube(landscape,x,y,z,.067*size,1.68*size,wood,7);
- ballShape(landscape,x,y+1.65*size,z,.67*size,rgb(46+(i%3)*10,88+(i%3)*8,52+(i%2)*6),6,9);
+ ballShape(landscape,x,y+1.65*size,z,.67*size,rgb(palette.trees[0]+(i%3)*10,palette.trees[1]+(i%3)*8,palette.trees[2]+(i%2)*6),6,9);
  ballShape(landscape,x-.35*size,y+1.88*size,z+.12*size,.53*size,rgb(79,127+(i%3)*5,69),6,9);
  ballShape(landscape,x+.33*size,y+2.03*size,z-.19*size,.52*size,rgb(48,103+(i%4)*7,55),6,9);
  ballShape(landscape,x-.05*size,y+2.37*size,z-.03*size,.38*size,rgb(66+(i%3)*7,116,62),5,8);
 }
 // Natural stone bank provides ONE optional skill-based alternate route.
-for(let i=0;i<16;i++){const z=6.1+i*.26,zz=z+.26;
+for(let i=0;i<16;i++){const z=holeIndex===0?6.1+i*.26:4.8+(holeIndex%4)*1.05+i*.26,zz=z+.26;
  const a=z=>mid(z)-width(z)+.035;
  quad(details,[a(z),height(a(z),z)+.03,z],[a(z)-.19,height(a(z),z)+.36,z],[a(zz)-.19,height(a(zz),zz)+.36,zz],[a(zz),height(a(zz),zz)+.03,zz],rgb(180+(i%3)*5,148+(i%4)*4,104),0);
  quad(details,[a(z)-.19,height(a(z),z)+.36,z],[a(z)-.36,height(a(z),z)+.24,z],[a(zz)-.36,height(a(zz),zz)+.24,zz],[a(zz)-.19,height(a(zz),zz)+.36,zz],rgb(208,176,127),0);
@@ -175,7 +229,7 @@ function bunker(cx,cz,rx,rz){
   tri(details,ring(a,.72,.039),ring(b,.72,.039),[cx,ground(cx,cz)+.06,cz],rgb(225,207,161));
  }
 }
-const bunkerAnchor={x:mid(13.4)+baseWidth(13.4)+2.4,z:13.4,rx:1.30,rz:2.0};
+bunkerAnchor={x:mid(13.4)+baseWidth(13.4)+2.4,z:13.4,rx:1.30,rz:2.0};
 bunker(bunkerAnchor.x,bunkerAnchor.z,bunkerAnchor.rx,bunkerAnchor.rz);
 
 // GA-112: quiet reflective pond with an organic shoreline well beyond the right fringe.
@@ -196,7 +250,7 @@ function pond(cx,cz,rx,rz){
   quad(waterGeo,[x-w,y,z],[x+w,y,z],[x+w*.7,y,z+.027],[x-w*.7,y,z+.027],rgb(163,207,192),-1);
  }
 }
-const pondAnchor={x:mid(11.8)+baseWidth(11.8)+5.65,z:11.8,rx:1.65,rz:2.55};
+pondAnchor={x:mid(11.8)+baseWidth(11.8)+5.65,z:11.8,rx:1.65,rz:2.55};
 pond(pondAnchor.x,pondAnchor.z,pondAnchor.rx,pondAnchor.rz);
 
 // Art-directed foreground stones and scrub frame the corridor, never create ball collisions.
@@ -232,9 +286,12 @@ tri(flagGeo,[cup.x+.63,cy+1.80,cup.z+.035],[cup.x+.82,cy+1.70,cup.z+.06],[cup.x+
 const sphere=geo();ballShape(sphere,0,0,0,1,rgb(245,248,230),12,16);
 const shadow=geo();for(let i=0;i<20;i++){let a=i*PI*2/20,b=(i+1)*PI*2/20;tri(shadow,[0,0,0],[BALL_RADIUS*1.3*Math.cos(a),0,BALL_RADIUS*1.3*Math.sin(a)],[BALL_RADIUS*1.3*Math.cos(b),0,BALL_RADIUS*1.3*Math.sin(b)],rgb(61,91,69));}
 function upload(g){if(!g.pos.length)return null;const packed=new Float32Array(g.pos.length/3*10);for(let i=0;i<g.pos.length/3;i++){packed.set(g.pos.slice(i*3,i*3+3),i*10);packed.set(g.norm.slice(i*3,i*3+3),i*10+3);packed.set(g.col.slice(i*3,i*3+3),i*10+6);packed[i*10+9]=g.grass[i];}const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STATIC_DRAW);return {buffer,count:packed.length/10}}
-for(const obj of [rough,details,landscape,waterGeo,green,flagGeo])meshes.push(upload(obj));const ballMesh=upload(sphere),shadowMesh=upload(shadow);
+for(const obj of [rough,details,landscape,waterGeo,green,flagGeo])meshes.push(upload(obj));
+ballMesh=upload(sphere);shadowMesh=upload(shadow);
+}
 function bind(mesh){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);for(const [attribute,offset,length] of [[loc.p,0,3],[loc.n,12,3],[loc.c,24,3],[loc.g,36,1]]){gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,length,gl.FLOAT,false,40,offset)}}
 function draw(mesh,model=ID){if(!mesh)return;bind(mesh);gl.uniformMatrix4fv(loc.m,false,model);gl.drawArrays(gl.TRIANGLES,0,mesh.count)}
+buildHoleScene();
 const camera={eye:[0,5.9,-8.0],look:[0,.4,7.8],behind:7.8,yaw:0};let viewProj=ID,widthPx=390,heightPx=570;
 function cameraGoal(){const dx=cup.x-state.ball.x,dz=cup.z-state.ball.z,remaining=Math.hypot(dx,dz);return {yaw:state.moving?state.shotYaw:Math.atan2(dx,dz),behind:state.moving?clamp(camera.behind,4,9.2):clamp(2.75+remaining*.30,3.3,7.2),lead:clamp(1.6+remaining*.48,2.1,8)}}
 function updateCamera(dt){if(state.aim)return;const g=cameraGoal(),gain=1-Math.exp(-dt*(state.moving?3.8:5.6));const err=Math.atan2(Math.sin(g.yaw-camera.yaw),Math.cos(g.yaw-camera.yaw));camera.yaw+=err*gain;camera.behind+=(g.behind-camera.behind)*gain;const fx=Math.sin(camera.yaw),fz=Math.cos(camera.yaw);const bx=state.ball.x,bz=state.ball.z,ex=bx-fx*camera.behind,ez=bz-fz*camera.behind,lx=bx+fx*g.lead,lz=bz+fz*g.lead;const goalEye=[ex,height(bx,bz)+3+camera.behind*.23,ez],goalLook=[lx,height(lx,lz)+.30,lz];for(let i=0;i<3;i++){camera.eye[i]+=(goalEye[i]-camera.eye[i])*gain;camera.look[i]+=(goalLook[i]-camera.look[i])*gain}}
@@ -251,12 +308,25 @@ function renderAim(){aimCtx.clearRect(0,0,widthPx,heightPx);const a=aimVector(),
  const tip=pts[pts.length-1],before=pts[pts.length-2],dx=tip[0]-before[0],dy=tip[1]-before[1],l=Math.hypot(dx,dy)||1,ux2=dx/l,uy2=dy/l,size=Math.max(8,widthPx/56);
  aimCtx.beginPath();aimCtx.moveTo(tip[0]-ux2*size-uy2*size*.55,tip[1]-uy2*size+ux2*size*.55);aimCtx.lineTo(tip[0],tip[1]);aimCtx.lineTo(tip[0]-ux2*size+uy2*size*.55,tip[1]-uy2*size-ux2*size*.55);aimCtx.stroke();}
 function render(){gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);viewProj=mul(perspective(54*rad,widthPx/heightPx,.1,160),lookAt(camera.eye,camera.look));gl.uniformMatrix4fv(loc.vp,false,viewProj);gl.uniform3fv(loc.eye,new Float32Array(camera.eye));for(const mesh of meshes)draw(mesh);if(!state.holed){const b=state.ball;draw(shadowMesh,translation(b.x,height(b.x,b.z)+.036,b.z));draw(ballMesh,translation(b.x,height(b.x,b.z)+.028+BALL_RADIUS,b.z,BALL_RADIUS))}renderAim()}
-function score(){const d=state.shots-3,names={[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'},name=names[d]||(d>3?d+' OVER PAR':'UNDER PAR');
+function score(){const d=state.shots-hole().par,names={[-3]:'ALBATROSS',[-2]:'EAGLE',[-1]:'BIRDIE',[0]:'PAR',[1]:'BOGEY',[2]:'DOUBLE BOGEY',[3]:'TRIPLE BOGEY'},name=names[d]||(d>3?d+' OVER PAR':'UNDER PAR');
  const message=state.shots===1?'AWESOME HOLE IN ONE!':d===-1?'GREAT BIRDIE!':d===0?'NICE PAR!':name;
- return {name,message,putts:state.shots,toPar:d===0?'E':d>0?'+'+d:String(d)}}
+ return {name,message,putts:state.shots,toPar:toParText(d),par:hole().par,hole:holeIndex+1}}
 let completionTimer=null,tipTimer=null,holeIntroTimer=null;
-function presentScore(){completionTimer=null;if(!state.holed)return;const s=score();el('resultName').textContent=s.name;el('resultTitle').textContent=s.message;el('resultPutts').textContent=s.putts;el('resultToPar').textContent=s.toPar;el('result').hidden=false;el('playAgain').focus({preventScroll:true})}
-function holeOut(){state.holed=true;state.moving=false;state.ball.vx=0;state.ball.vz=0;state.ball.x=cup.x;state.ball.z=cup.z;el('status').textContent='HOLE COMPLETE';completionTimer=setTimeout(presentScore,430)}
+function presentScore(){completionTimer=null;if(!state.holed)return;const s=score(),end=holeIndex===HOLES.length-1,t=roundTotals();
+ el('resultName').textContent=end?s.message:s.name;el('resultName').hidden=false;
+ el('resultTitle').textContent=end?'ROUND COMPLETE!':s.message;
+ el('resultPutts').textContent=s.putts;el('resultPar').textContent=s.par;
+ el('resultToPar').textContent=s.toPar;
+ el('resultLabel').textContent='HOLE '+String(holeIndex+1).padStart(2,'0')+' · '+hole().name.toUpperCase();
+ el('roundSummary').textContent='ROUND '+t.toPar+' · '+t.strokes+' PUTTS · '+t.completed+'/9 HOLES';
+ el('playAgain').textContent=end?'PLAY AGAIN ↻':'NEXT HOLE →';
+ el('advanceHole').textContent=end?'↻ RESTART ROUND':'NEXT HOLE →';
+ el('result').hidden=false;el('playAgain').focus({preventScroll:true})}
+function holeOut(){if(state.holed)return;state.holed=true;state.moving=false;state.ball.vx=0;state.ball.vz=0;state.ball.x=cup.x;state.ball.z=cup.z;
+ roundScores[holeIndex]=state.shots;updateScorecard();
+ el('advanceHole').hidden=false;
+ el('status').textContent=holeIndex===HOLES.length-1?'ROUND COMPLETE':'HOLE COMPLETE';
+ completionTimer=setTimeout(presentScore,430)}
 function step(dt){if(!state.moving||state.holed)return;const b=state.ball,sp=Math.hypot(b.vx,b.vz);if(sp<.16){state.moving=false;b.vx=b.vz=0;el('status').textContent='READY TO PUTT';return}const g=grad(b.x,b.z);b.vx+=(-3.25*g.x-1.60*b.vx/sp)*dt;b.vz+=(-3.25*g.z-1.60*b.vz/sp)*dt;b.x+=b.vx*dt;b.z+=b.vz*dt;
  // Every edge keeps the ball on the green: there is no out-of-bounds.
  b.z=clamp(b.z,.25,END-.23);if(b.z===.25||b.z===END-.23)b.vz*=-.48;
@@ -273,18 +343,81 @@ function step(dt){if(!state.moving||state.holed)return;const b=state.ball,sp=Mat
 }
 function dismissTip(){el('bankTip').hidden=true;if(tipTimer!==null){clearTimeout(tipTimer);tipTimer=null}}
 function shoot(){const a=aimVector();state.aim=null;el('holeIntro').hidden=true;if(!a||state.holed){el('status').textContent='READY TO PUTT';return;}state.ball.vx=a.vx;state.ball.vz=a.vz;state.shots++;state.moving=true;state.hasPutt=true;state.shotYaw=camera.yaw;el('strokes').textContent=state.shots;el('status').textContent='BALL IN MOTION';dismissTip()}
-function reset(){if(completionTimer!==null)clearTimeout(completionTimer);completionTimer=null;el('result').hidden=true;pinRebounds=0;el('holeIntro').hidden=false;if(holeIntroTimer!==null)clearTimeout(holeIntroTimer);holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);state.ball={x:mid(1.55),z:1.55,vx:0,vz:0};state.moving=false;state.holed=false;state.aim=null;state.shots=0;state.hasPutt=false;camera.yaw=0;camera.behind=7.8;camera.eye=[0,5.9,-8.0];camera.look=[0,.4,7.8];el('strokes').textContent='0';el('status').textContent='READY TO ROLL';el('powerFill').style.height='0%';el('powerPercent').textContent='0%'}
+function reset(){if(completionTimer!==null)clearTimeout(completionTimer);completionTimer=null;
+ roundScores[holeIndex]=null;el('result').hidden=true;el('advanceHole').hidden=true;
+ pinRebounds=0;el('holeIntro').hidden=false;if(holeIntroTimer!==null)clearTimeout(holeIntroTimer);
+ holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
+ state.ball={x:mid(1.55),z:1.55,vx:0,vz:0};state.moving=false;state.holed=false;state.aim=null;state.shots=0;state.hasPutt=false;
+ camera.yaw=0;camera.behind=7.8;camera.eye=[0,5.9,-8.0];camera.look=[0,.4,7.8];
+ el('strokes').textContent='0';el('status').textContent='READY TO ROLL';
+ el('powerFill').style.height='0%';el('powerPercent').textContent='0%';
+ updateScorecard()}
+
+function updateScorecard(){
+ const t=roundTotals();
+ el('roundTotal').textContent=t.toPar;
+ el('scoreProgress').textContent=t.completed+' / 9 COMPLETE';
+ el('scoreTotal').textContent=t.strokes+' PUTTS · '+t.toPar;
+ el('scorecard').innerHTML=HOLES.map((h,i)=>{
+  const n=roundScores[i],cls=n!==null?'done':i===holeIndex?'active':'';
+  const label=n===null?(i===holeIndex?'PLAYING':'—'):n+' · '+toParText(n-h.par);
+  return '<div class="score-tile '+cls+'"><small>HOLE '+String(i+1).padStart(2,'0')+' · PAR '+h.par+'</small><strong>'+label+'</strong></div>';
+ }).join('');
+}
+
+function syncHoleUI(){
+ const h=hole(),i=String(holeIndex+1).padStart(2,'0');
+ el('holeNumber').textContent='HOLE '+i+' OF 09 · THE FOUNDERS NINE';
+ el('holeName').textContent=h.name;el('holePar').textContent=h.par;
+ el('introName').textContent='HOLE '+i+' · '+h.name.toUpperCase();
+ el('introPar').textContent='PAR '+h.par;
+ el('courseInscription').textContent='FOUNDERS NINE · HOLE '+i;
+ el('panelHole').textContent=h.name+'.';
+ el('courseTheme').textContent='THE FOUNDERS NINE / '+h.theme.toUpperCase();
+ el('holeTip').textContent='QUICK TIP · '+h.tip;
+ el('resultPar').textContent=h.par;
+ el('bankTip').hidden=false;
+ if(tipTimer!==null)clearTimeout(tipTimer);
+ tipTimer=setTimeout(dismissTip,7000);
+ const skies=[
+  'linear-gradient(180deg,#7daebd,#b8d0c0 43%,#53764f)',
+  'linear-gradient(180deg,#82a7bd,#dbc39a 45%,#9d8a65)',
+  'linear-gradient(180deg,#8caebf,#b2c4b9 44%,#617f79)',
+  'linear-gradient(180deg,#74acc4,#c9d6c0 44%,#5b8b80)',
+  'linear-gradient(180deg,#92a7b0,#d5bd93 46%,#8d7857)',
+  'linear-gradient(180deg,#78bbcd,#c7d4bf 44%,#478a84)',
+  'linear-gradient(180deg,#83a3bc,#c3c4b9 45%,#70887f)',
+  'linear-gradient(180deg,#83bbaf,#c4cfb4 45%,#60866a)',
+  'linear-gradient(180deg,#98b8c0,#d8c9ad 45%,#5f8066)'
+ ];
+ scene.style.background=skies[holeIndex];
+ updateScorecard();
+}
+function selectHole(index){
+ if(!Number.isInteger(index)||index<0||index>=HOLES.length)return false;
+ holeIndex=index;END=hole().length;SHOULDER=END-1.25;FINAL_Z=END-1.9;
+ cup.x=mid(FINAL_Z)+hole().cupOffset;cup.z=FINAL_Z;
+ buildHoleScene();reset();syncHoleUI();return true;
+}
+function nextHole(){if(!state.holed)return false;if(holeIndex===HOLES.length-1){restartRound();return true}return selectHole(holeIndex+1)}
+function restartRound(){roundScores.fill(null);selectHole(0)}
+
 function touchPos(e){const box=canvas.getBoundingClientRect();return {x:e.clientX-box.left,y:e.clientY-box.top}}
 canvas.addEventListener('pointerdown',e=>{if(state.moving||state.holed)return;const p=touchPos(e);state.aim={startX:p.x,startY:p.y,dx:0,dy:0,id:e.pointerId};el('powerRail').classList.toggle('left',p.x>canvas.getBoundingClientRect().width/2);canvas.setPointerCapture(e.pointerId);el('status').textContent='RELEASE TO PUTT'});
 canvas.addEventListener('pointermove',e=>{if(!state.aim||e.pointerId!==state.aim.id)return;const p=touchPos(e);state.aim.dx=p.x-state.aim.startX;state.aim.dy=p.y-state.aim.startY;});
 canvas.addEventListener('pointerup',e=>{if(!state.aim||e.pointerId!==state.aim.id)return;const p=touchPos(e);state.aim.dx=p.x-state.aim.startX;state.aim.dy=p.y-state.aim.startY;shoot()});
 canvas.addEventListener('pointercancel',()=>{state.aim=null;el('status').textContent='READY TO PUTT'});
-el('closeTip').addEventListener('click',dismissTip);el('reset').addEventListener('click',reset);el('playAgain').addEventListener('click',reset);el('viewGreen').addEventListener('click',()=>{el('result').hidden=true;el('reset').focus({preventScroll:true})});
-el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\n\nHOLE 01 · PAR 3. Pull back opposite your intended shot direction, then release. You can aim in any direction.\n\nUphill slows the ball, downhill speeds it up, and side slopes make it turn. The ball always stays on the green; the edges bounce it back into play. A hard hit on the flagstick may ricochet away. Aim for a controlled pace to sink it.\n\nAfter the ball stops, the camera moves toward your next shot.'));
+el('closeTip').addEventListener('click',dismissTip);
+el('reset').addEventListener('click',reset);
+el('playAgain').addEventListener('click',nextHole);
+el('advanceHole').addEventListener('click',nextHole);
+el('restartRound').addEventListener('click',restartRound);
+el('viewGreen').addEventListener('click',()=>{el('result').hidden=true;el('advanceHole').focus({preventScroll:true})});
+el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\\n\\nTHE FOUNDERS NINE · 9 HOLES. Pull back opposite your shot direction, then release. Aim in any direction.\\n\\nUphill slows the ball, downhill speeds it up, and side slopes curve your putt. The ball always stays on the green. Hard pin hits ricochet. A gentle approach drops.\\n\\nAfter each completed hole, tap Next Hole. Your round total and +/- par are tracked across all nine holes.'));
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('result').hidden)el('result').hidden=true});window.addEventListener('resize',resize);
 resize();let last=performance.now(),acc=0;function animate(now){const dt=Math.min((now-last)/1000,.05);last=now;acc+=dt;let runs=0;while(acc>=1/120&&runs++<7){step(1/120);acc-=1/120}updateCamera(dt);render();requestAnimationFrame(animate)}requestAnimationFrame(animate);
-tipTimer=setTimeout(dismissTip,7000);holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
-window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-112 environment art pass',getLandscapeAnchors:()=>({bunker:{...bunkerAnchor},pond:{...pondAnchor}}),step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
+syncHoleUI();holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
+window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-113 nine-hole round',getLandscapeAnchors:()=>({bunker:{...bunkerAnchor},pond:{...pondAnchor}}),getHoles:()=>HOLES.map(h=>({...h})),getHoleIndex:()=>holeIndex,getRound:()=>({hole:holeIndex+1,scores:roundScores.slice(),...roundTotals()}),nextHole,selectHole,restartRound,step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
 })();
 </script>
 </body></html>

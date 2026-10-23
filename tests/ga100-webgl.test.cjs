@@ -3,10 +3,10 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const html=fs.readFileSync(path.join(__dirname,'../playtest/ga-100-webgl/index.html'),'utf8');
 const script=html.match(/<script>([\s\S]*?)<\/script>/)?.[1];assert.ok(script);
 function boot(){
- const events={},elements={};let count=0,bufferCount=0,drawCalls=0;
+ const events={},elements={};let count=0,bufferCount=0,deletedBuffers=0,drawCalls=0;
  const gl={VERTEX_SHADER:1,FRAGMENT_SHADER:2,COMPILE_STATUS:1,LINK_STATUS:2,DEPTH_TEST:2929,LEQUAL:515,TRIANGLES:4,FLOAT:5126,ARRAY_BUFFER:34962,STATIC_DRAW:35044,COLOR_BUFFER_BIT:16384,DEPTH_BUFFER_BIT:256};
  for(const n of ['shaderSource','compileShader','attachShader','linkProgram','useProgram','enable','depthFunc','bindBuffer','bufferData','viewport','uniformMatrix4fv','uniform3fv','enableVertexAttribArray','vertexAttribPointer','clearColor','clear'])gl[n]=()=>{};
- gl.createShader=()=>({});gl.getShaderParameter=()=>true;gl.createProgram=()=>({});gl.getProgramParameter=()=>true;gl.getAttribLocation=(_,name)=>({aPos:0,aNorm:1,aCol:2,aGrass:3}[name]??0);gl.getUniformLocation=()=>({});gl.createBuffer=()=>{bufferCount++;return {}};gl.drawArrays=(_,__,ct)=>{count+=ct;drawCalls++};
+ gl.createShader=()=>({});gl.getShaderParameter=()=>true;gl.createProgram=()=>({});gl.getProgramParameter=()=>true;gl.getAttribLocation=(_,name)=>({aPos:0,aNorm:1,aCol:2,aGrass:3}[name]??0);gl.getUniformLocation=()=>({});gl.createBuffer=()=>{bufferCount++;return {}};gl.deleteBuffer=()=>{deletedBuffers++};gl.drawArrays=(_,__,ct)=>{count+=ct;drawCalls++};
  const ctx={clearRect(){},beginPath(){},setLineDash(){},moveTo(){},lineTo(){},stroke(){}};
  function el(id){if(!elements[id])elements[id]={id,hidden:id==='result'||id==='loading',style:{},classList:{toggle(){},add(){},remove(){}},textContent:'',setAttribute(){},focus(){},addEventListener:(type,fn)=>{events[id+':'+type]=fn},getBoundingClientRect:()=>({width:390,height:570,left:0,top:0}),setPointerCapture(){}};return elements[id]}
  el('scene');el('result');el('bankTip');el('glCanvas');el('aimCanvas');
@@ -15,7 +15,7 @@ function boot(){
  const window={devicePixelRatio:1,addEventListener:(name,fn)=>events['window:'+name]=fn},document={getElementById:el};
  const setTimeout=(fn,ms)=>{let id=++seq;timers.set(id,{fn,ms});return id},clearTimeout=id=>timers.delete(id);
  vm.runInNewContext(script,{window,document,requestAnimationFrame,setTimeout,clearTimeout,performance:{now:()=>0},alert(){}},{timeout:10000,filename:'game.js'});
- return {game:window.__ga3d,events,elements,timers,render:(t=16)=>{if(callback)callback(t)},stats:()=>({bufferCount,drawCalls,vertices:count})};
+ return {game:window.__ga3d,events,elements,timers,render:(t=16)=>{if(callback)callback(t)},stats:()=>({bufferCount,deletedBuffers,drawCalls,vertices:count})};
 }
 test('Genuine GPU geometry is uploaded and WebGL render loop dispatches meshes',()=>{const a=boot();assert.equal(a.game.available,true);assert.match(a.game.engine,/WebGL/);assert.ok(a.stats().bufferCount>=6);a.render();assert.ok(a.stats().drawCalls>=6);assert.ok(a.stats().vertices>50000)});
 test('Bounded green has an organic rounded cap with cup safely before end',()=>{const g=boot().game,END=g.getGreenEnd();assert.equal(END,19);assert.ok(g.getCup().z<END-1.0);assert.ok(g.getGreenWidth(17.9)>g.getGreenWidth(18.6));assert.ok(g.getGreenWidth(18.6)>0);assert.ok(Math.abs(g.getGreenWidth(END))<.001)});
@@ -86,7 +86,7 @@ test('Richer decorative scenery exists outside the playable corridor',()=>{
 
 test('GA-112 premium environment uploads a distinct pond mesh and retains the WebGL rendering path',()=>{
  const a=boot();
- assert.equal(a.game.getSceneVersion(),'GA-112 environment art pass');
+ assert.equal(a.game.getSceneVersion(),'GA-113 nine-hole round');
  assert.ok(a.stats().bufferCount>=8,'terrain, grass, scenery, pond, flag and ball meshes should be uploaded');
  a.render();
  assert.ok(a.stats().drawCalls>=8);
@@ -131,4 +131,81 @@ test('GA-112 retains skill-only physics and mobile power/aim controls',()=>{
  a.events['glCanvas:pointerup'](e(320,375));
  assert.equal(g.getState().shots,1);
  assert.equal(g.getState().moving,true);
+});
+
+
+test('GA-113 defines nine unique and playable greens with correct pars',()=>{
+ const a=boot(),g=a.game,holes=g.getHoles(),checks=[];
+ assert.equal(holes.length,9);
+ assert.equal(new Set(holes.map(h=>h.name)).size,9);
+ assert.ok(holes.some(h=>h.par===4)&&holes.some(h=>h.par===3));
+ for(let i=0;i<9;i++){
+  assert.equal(g.selectHole(i),true);
+  assert.equal(g.getHoleIndex(),i);
+  assert.equal(g.getGreenEnd(),holes[i].length);
+  const c=g.getCup();assert.ok(Number.isFinite(c.x)&&Number.isFinite(c.z));
+  checks.push([c.x,c.z,g.getHeight(0,8)].map(n=>n.toFixed(3)).join(':'));
+  assert.equal(a.elements.holePar.textContent,holes[i].par);
+ }
+ assert.equal(new Set(checks).size,9);
+ assert.equal(g.selectHole(9),false);
+});
+
+test('GA-113 changing holes releases old GPU buffers',()=>{
+ const a=boot(),base=a.stats().bufferCount;
+ a.game.selectHole(1);
+ assert.ok(a.stats().deletedBuffers>=base);
+ assert.ok(a.stats().bufferCount>=base*2);
+ a.render();assert.ok(a.stats().drawCalls>=8);
+});
+
+
+test('GA-113 plays all nine holes and completes an accurate full round',()=>{
+ const a=boot(),g=a.game,e=(x,y)=>({clientX:x,clientY:y,pointerId:7});
+ assert.equal(a.elements.scorecard.innerHTML.match(/score-tile/g).length,9);
+ for(let i=0;i<9;i++){
+  assert.equal(g.getHoleIndex(),i);
+  assert.equal(a.elements.holePar.textContent,g.getHoles()[i].par);
+  a.events['glCanvas:pointerdown'](e(190,310));
+  a.events['glCanvas:pointermove'](e(190,400));
+  a.events['glCanvas:pointerup'](e(190,400));
+  const c=g.getCup();g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);
+  assert.equal(g.getState().holed,true);
+  assert.equal(g.getRound().completed,i+1);
+  assert.equal(g.getRound().scores[i],1);
+  assert.equal(g.getRound().strokes,i+1);
+  const timer=[...a.timers.values()].filter(t=>t.ms===430).at(-1);
+  assert.ok(timer);timer.fn();
+  assert.equal(a.elements.playAgain.textContent,i===8?'PLAY AGAIN ↻':'NEXT HOLE →');
+  if(i===8){
+   assert.equal(a.elements.resultTitle.textContent,'ROUND COMPLETE!');
+   assert.ok(a.elements.roundSummary.textContent.includes('9/9 HOLES'));
+  }
+  assert.equal(g.nextHole(),true);
+ }
+ assert.equal(g.getHoleIndex(),0);
+ assert.equal(g.getRound().completed,0);
+ assert.equal(g.getRound().strokes,0);
+ assert.ok(g.getRound().scores.every(n=>n===null));
+ assert.equal(a.elements.holeIntro.hidden,false);
+});
+
+
+test('GA-113 par four birdie, running total and restart-round control',()=>{
+ const a=boot(),g=a.game,e=(x,y)=>({clientX:x,clientY:y,pointerId:1});
+ g.selectHole(2);assert.equal(g.getHoles()[2].par,4);
+ for(let i=0;i<3;i++){
+  a.events['glCanvas:pointerdown'](e(180,340));
+  a.events['glCanvas:pointermove'](e(180,430));
+  a.events['glCanvas:pointerup'](e(180,430));
+  if(i<2){const pos=g.getState();g.setBall(pos.x,pos.z,.1,0);g.step(1/120)}
+ }
+ assert.equal(g.score().message,'GREAT BIRDIE!');
+ const c=g.getCup();g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);
+ assert.equal(g.getRound().scores[2],3);
+ assert.equal(g.getRound().toPar,'-1');
+ a.events['restartRound:click']();
+ assert.equal(g.getHoleIndex(),0);
+ assert.equal(g.getRound().completed,0);
+ assert.equal(a.elements.scoreTotal.textContent,'0 PUTTS · E');
 });
