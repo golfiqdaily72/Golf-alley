@@ -78,28 +78,51 @@ function lookAt(eye,target){const z=unit(minus(eye,target)),x=unit(cross([0,1,0]
 function mul(a,b){const c=new Float32Array(16);for(let col=0;col<4;col++)for(let row=0;row<4;row++){let v=0;for(let k=0;k<4;k++)v+=a[k*4+row]*b[col*4+k];c[col*4+row]=v}return c}
 function translation(x,y,z,s=1){return new Float32Array([s,0,0,0,0,s,0,0,0,0,s,0,x,y,z,1])}
 const ID=translation(0,0,0);
-const mid=z=>.50*Math.sin(z*.25+.55)-.25*Math.sin(z*.49);
-const END=19.0,SHOULDER=17.75,FINAL_Z=17.1;
+// GA-113: nine deterministic green profiles, with individual shape, break and visual personality.
+const HOLES=[
+ {name:'The Bend',par:3,length:19,bend:0,phase:0,width:0,tilt:0,rise:0,cupOffset:.23,theme:'Parkland',tip:'Read the side slope. The left sandstone bank is an optional shortcut.'},
+ {name:'Canyon Run',par:3,length:21,bend:.92,phase:.1,width:-.18,tilt:.085,rise:.035,cupOffset:-.35,theme:'Desert',tip:'The narrowing right turn rewards controlled pace.'},
+ {name:'The Switchback',par:4,length:23,bend:-1.20,phase:1.4,width:-.12,tilt:-.065,rise:-.040,cupOffset:.22,theme:'Alpine',tip:'A sweeping reverse break sets up your next approach.'},
+ {name:'Cypress Point',par:3,length:18,bend:.62,phase:2.1,width:.05,tilt:.105,rise:-.010,cupOffset:-.24,theme:'Coastal',tip:'Take the high line, then let the slope bring it back.'},
+ {name:'Sandstone S',par:4,length:24,bend:1.38,phase:3.0,width:-.20,tilt:-.095,rise:.020,cupOffset:.18,theme:'Desert',tip:'Two bends reward smart positioning over brute force.'},
+ {name:'Lakeside',par:3,length:20,bend:-.73,phase:.7,width:.16,tilt:.045,rise:-.050,cupOffset:.36,theme:'Resort',tip:'The decorative lake is outside the playable green; follow the contour.'},
+ {name:'The Ridge',par:4,length:25,bend:1.06,phase:1.9,width:-.28,tilt:.12,rise:.055,cupOffset:-.12,theme:'Mountain',tip:'A narrow approach favors patient speed control.'},
+ {name:'Double Break',par:3,length:20.5,bend:-1.15,phase:3.6,width:-.08,tilt:-.12,rise:.015,cupOffset:.31,theme:'Parkland',tip:'Watch the ball change direction as it passes the ridge.'},
+ {name:'Homeward',par:4,length:23.5,bend:.85,phase:4.4,width:.08,tilt:.07,rise:.030,cupOffset:-.28,theme:'Clubhouse',tip:'Finish strong. Banking is optional; a clean line also works.'}
+];
+let holeIndex=0;
+const hole=()=>HOLES[holeIndex];
+const mid=z=>.50*Math.sin(z*.25+.55)-.25*Math.sin(z*.49)+hole().bend*Math.sin(z*.25+hole().phase)*Math.sin(PI*clamp(z/hole().length,0,1));
+
+let END=19.0,SHOULDER=17.75,FINAL_Z=17.1;
 const taper=z=>{let t=clamp((z-SHOULDER)/(END-SHOULDER),0,1);return Math.sqrt(Math.max(0,1-t*t))};
-const baseWidth=z=>2.34+.17*Math.sin(z*.53)+.10*z/18;
+const baseWidth=z=>2.34+.17*Math.sin(z*.53)+.10*z/18+hole().width;
 const width=z=>baseWidth(z)*taper(z);
 const outerWidth=z=>(baseWidth(z)+.72)*taper(z);
-const height=(x,z)=>.19*Math.sin(z*.35+.3)+.19*Math.sin(.77*x+.19*z)+.055*x*Math.sin(z*.44)-.02*(z-8)+.022*Math.sin(x*1.3+z*.5);
+const height=(x,z)=>.19*Math.sin(z*.35+.3)+.19*Math.sin(.77*x+.19*z)+.055*x*Math.sin(z*.44)-.02*(z-8)+.022*Math.sin(x*1.3+z*.5)+hole().tilt*x+hole().rise*(z-8);
 const grad=(x,z)=>{const e=.022;return {x:(height(x+e,z)-height(x-e,z))/(2*e),z:(height(x,z+e)-height(x,z-e))/(2*e)}};
 const ground=(x,z)=>height(x,z)-.23-.045*Math.abs(x-mid(z))+.09*Math.sin(x*.3+z*.25)*Math.cos(x*.22);
 const cup={x:mid(FINAL_Z)+.23,z:FINAL_Z};
+const roundScores=Array(HOLES.length).fill(null);
+function toParText(n){return n===0?'E':n>0?'+'+n:String(n)}
+function roundTotals(){const completed=roundScores.map((n,i)=>n===null?null:{n,par:HOLES[i].par}).filter(Boolean);const strokes=completed.reduce((a,v)=>a+v.n,0),par=completed.reduce((a,v)=>a+v.par,0);return {completed:completed.length,strokes,par,toPar:toParText(strokes-par)}}
 // Golf ball (42.67 mm) to cup (108 mm) diameter ratio: 0.395.
 const BALL_RADIUS=.086,CUP_RADIUS=.216,FLAG_RADIUS=.023;
 let pinRebounds=0;
 const state={ball:{x:mid(1.55),z:1.55,vx:0,vz:0},shots:0,moving:false,holed:false,aim:null,cameraYaw:0,shotYaw:0,hasPutt:false,tipSeen:false};
-const meshes=[];
+const meshes=[];let ballMesh=null,shadowMesh=null,bunkerAnchor=null,pondAnchor=null;
 function geo(){return {pos:[],norm:[],col:[],grass:[]}}
 function vertex(g,p,n,c,grass){g.pos.push(...p);g.norm.push(...n);g.col.push(...c);g.grass.push(grass||0)}
 function tri(g,a,b,c,color,grass=0){let n=unit(cross(minus(b,a),minus(c,a)));if(n[1]<0)n=n.map(v=>-v);vertex(g,a,n,color,grass);vertex(g,b,n,color,grass);vertex(g,c,n,color,grass)}
 function quad(g,a,b,c,d,color,grass=0){tri(g,a,b,c,color,grass);tri(g,a,c,d,color,grass)}
 const rgb=(r,g,b)=>[r/255,g/255,b/255];
 function variation(x,z,scale=1){return Math.sin(x*3.21+z*6.14)*.045*scale+Math.sin(x*9.7-z*3.7)*.026*scale}
-const rough=geo(),green=geo(),details=geo(),landscape=geo(),waterGeo=geo(),flagGeo=geo();
+function buildHoleScene(){
+ // Release buffers for the previous hole. One WebGL context and one animation loop.
+ for(const m of [...meshes,ballMesh,shadowMesh])if(m&&gl.deleteBuffer)gl.deleteBuffer(m.buffer);
+ meshes.length=0;
+ const rough=geo(),green=geo(),details=geo(),landscape=geo(),waterGeo=geo(),flagGeo=geo();
+
 // Rolling distant terrain rendered as actual depth-tested triangles.
 for(let zi=0;zi<77;zi++){const z=-18+zi*.97,zz=z+.97;for(let xi=0;xi<75;xi++){const x=-36+xi*.96,xx=x+.96;const color=rgb(75,118,76).map(v=>v*(1+variation(x,z,1.15)));quad(rough,[x,ground(x,z),z],[xx,ground(xx,z),z],[xx,ground(xx,zz),zz],[x,ground(x,zz),zz],color,.20)}}
 // Short-grass fringe is a separate, bounded 3D ring. It closes at the same z as the green.
@@ -175,7 +198,7 @@ function bunker(cx,cz,rx,rz){
   tri(details,ring(a,.72,.039),ring(b,.72,.039),[cx,ground(cx,cz)+.06,cz],rgb(225,207,161));
  }
 }
-const bunkerAnchor={x:mid(13.4)+baseWidth(13.4)+2.4,z:13.4,rx:1.30,rz:2.0};
+bunkerAnchor={x:mid(13.4)+baseWidth(13.4)+2.4,z:13.4,rx:1.30,rz:2.0};
 bunker(bunkerAnchor.x,bunkerAnchor.z,bunkerAnchor.rx,bunkerAnchor.rz);
 
 // GA-112: quiet reflective pond with an organic shoreline well beyond the right fringe.
@@ -196,7 +219,7 @@ function pond(cx,cz,rx,rz){
   quad(waterGeo,[x-w,y,z],[x+w,y,z],[x+w*.7,y,z+.027],[x-w*.7,y,z+.027],rgb(163,207,192),-1);
  }
 }
-const pondAnchor={x:mid(11.8)+baseWidth(11.8)+5.65,z:11.8,rx:1.65,rz:2.55};
+pondAnchor={x:mid(11.8)+baseWidth(11.8)+5.65,z:11.8,rx:1.65,rz:2.55};
 pond(pondAnchor.x,pondAnchor.z,pondAnchor.rx,pondAnchor.rz);
 
 // Art-directed foreground stones and scrub frame the corridor, never create ball collisions.
@@ -232,9 +255,12 @@ tri(flagGeo,[cup.x+.63,cy+1.80,cup.z+.035],[cup.x+.82,cy+1.70,cup.z+.06],[cup.x+
 const sphere=geo();ballShape(sphere,0,0,0,1,rgb(245,248,230),12,16);
 const shadow=geo();for(let i=0;i<20;i++){let a=i*PI*2/20,b=(i+1)*PI*2/20;tri(shadow,[0,0,0],[BALL_RADIUS*1.3*Math.cos(a),0,BALL_RADIUS*1.3*Math.sin(a)],[BALL_RADIUS*1.3*Math.cos(b),0,BALL_RADIUS*1.3*Math.sin(b)],rgb(61,91,69));}
 function upload(g){if(!g.pos.length)return null;const packed=new Float32Array(g.pos.length/3*10);for(let i=0;i<g.pos.length/3;i++){packed.set(g.pos.slice(i*3,i*3+3),i*10);packed.set(g.norm.slice(i*3,i*3+3),i*10+3);packed.set(g.col.slice(i*3,i*3+3),i*10+6);packed[i*10+9]=g.grass[i];}const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.STATIC_DRAW);return {buffer,count:packed.length/10}}
-for(const obj of [rough,details,landscape,waterGeo,green,flagGeo])meshes.push(upload(obj));const ballMesh=upload(sphere),shadowMesh=upload(shadow);
+for(const obj of [rough,details,landscape,waterGeo,green,flagGeo])meshes.push(upload(obj));
+ballMesh=upload(sphere);shadowMesh=upload(shadow);
+}
 function bind(mesh){gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);for(const [attribute,offset,length] of [[loc.p,0,3],[loc.n,12,3],[loc.c,24,3],[loc.g,36,1]]){gl.enableVertexAttribArray(attribute);gl.vertexAttribPointer(attribute,length,gl.FLOAT,false,40,offset)}}
 function draw(mesh,model=ID){if(!mesh)return;bind(mesh);gl.uniformMatrix4fv(loc.m,false,model);gl.drawArrays(gl.TRIANGLES,0,mesh.count)}
+buildHoleScene();
 const camera={eye:[0,5.9,-8.0],look:[0,.4,7.8],behind:7.8,yaw:0};let viewProj=ID,widthPx=390,heightPx=570;
 function cameraGoal(){const dx=cup.x-state.ball.x,dz=cup.z-state.ball.z,remaining=Math.hypot(dx,dz);return {yaw:state.moving?state.shotYaw:Math.atan2(dx,dz),behind:state.moving?clamp(camera.behind,4,9.2):clamp(2.75+remaining*.30,3.3,7.2),lead:clamp(1.6+remaining*.48,2.1,8)}}
 function updateCamera(dt){if(state.aim)return;const g=cameraGoal(),gain=1-Math.exp(-dt*(state.moving?3.8:5.6));const err=Math.atan2(Math.sin(g.yaw-camera.yaw),Math.cos(g.yaw-camera.yaw));camera.yaw+=err*gain;camera.behind+=(g.behind-camera.behind)*gain;const fx=Math.sin(camera.yaw),fz=Math.cos(camera.yaw);const bx=state.ball.x,bz=state.ball.z,ex=bx-fx*camera.behind,ez=bz-fz*camera.behind,lx=bx+fx*g.lead,lz=bz+fz*g.lead;const goalEye=[ex,height(bx,bz)+3+camera.behind*.23,ez],goalLook=[lx,height(lx,lz)+.30,lz];for(let i=0;i<3;i++){camera.eye[i]+=(goalEye[i]-camera.eye[i])*gain;camera.look[i]+=(goalLook[i]-camera.look[i])*gain}}
