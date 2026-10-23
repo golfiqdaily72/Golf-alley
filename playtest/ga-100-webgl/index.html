@@ -175,7 +175,8 @@ function bunker(cx,cz,rx,rz){
   tri(details,ring(a,.72,.039),ring(b,.72,.039),[cx,ground(cx,cz)+.06,cz],rgb(225,207,161));
  }
 }
-bunker(mid(13.4)+baseWidth(13.4)+1.38,13.4,1.30,2.0);
+const bunkerAnchor={x:mid(13.4)+baseWidth(13.4)+2.4,z:13.4,rx:1.30,rz:2.0};
+bunker(bunkerAnchor.x,bunkerAnchor.z,bunkerAnchor.rx,bunkerAnchor.rz);
 
 // GA-112: quiet reflective pond with an organic shoreline well beyond the right fringe.
 function pond(cx,cz,rx,rz){
@@ -195,7 +196,8 @@ function pond(cx,cz,rx,rz){
   quad(waterGeo,[x-w,y,z],[x+w,y,z],[x+w*.7,y,z+.027],[x-w*.7,y,z+.027],rgb(163,207,192),-1);
  }
 }
-pond(mid(11.8)+baseWidth(11.8)+5.65,11.8,1.65,2.55);
+const pondAnchor={x:mid(11.8)+baseWidth(11.8)+5.65,z:11.8,rx:1.65,rz:2.55};
+pond(pondAnchor.x,pondAnchor.z,pondAnchor.rx,pondAnchor.rz);
 
 // Art-directed foreground stones and scrub frame the corridor, never create ball collisions.
 for(let i=0;i<26;i++){
@@ -282,7 +284,7 @@ el('help').addEventListener('click',()=>alert('GOLF ALLEY — ROLL IT.\n\nHOLE 0
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!el('result').hidden)el('result').hidden=true});window.addEventListener('resize',resize);
 resize();let last=performance.now(),acc=0;function animate(now){const dt=Math.min((now-last)/1000,.05);last=now;acc+=dt;let runs=0;while(acc>=1/120&&runs++<7){step(1/120);acc-=1/120}updateCamera(dt);render();requestAnimationFrame(animate)}requestAnimationFrame(animate);
 tipTimer=setTimeout(dismissTip,7000);holeIntroTimer=setTimeout(()=>{el('holeIntro').hidden=true},4500);
-window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-112 environment art pass',step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
+window.__ga3d={available:true,engine:'WebGL depth-tested 3D mesh',getState:()=>({...state.ball,shots:state.shots,moving:state.moving,holed:state.holed}),getCamera:()=>({...camera}),getCup:()=>({...cup}),getHeight:height,getGradient:grad,getGreenWidth:width,getGreenEnd:()=>END,getBallRadius:()=>BALL_RADIUS,getCupRadius:()=>CUP_RADIUS,getPinRebounds:()=>pinRebounds,getSceneVersion:()=> 'GA-112 environment art pass',getLandscapeAnchors:()=>({bunker:{...bunkerAnchor},pond:{...pondAnchor}}),step,reset,setBall:(x,z,vx,vz)=>{state.ball={x,z,vx,vz};state.moving=true;state.holed=false;state.shotYaw=camera.yaw},score};
 })();
 </script>
 </body></html>
