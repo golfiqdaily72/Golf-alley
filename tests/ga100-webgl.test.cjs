@@ -20,7 +20,7 @@ function boot(){
 test('Genuine GPU geometry is uploaded and WebGL render loop dispatches meshes',()=>{const a=boot();assert.equal(a.game.available,true);assert.match(a.game.engine,/WebGL/);assert.ok(a.stats().bufferCount>=6);a.render();assert.ok(a.stats().drawCalls>=6);assert.ok(a.stats().vertices>50000)});
 test('Bounded green has an organic rounded cap with cup safely before end',()=>{const g=boot().game,END=g.getGreenEnd();assert.equal(END,19);assert.ok(g.getCup().z<END-1.0);assert.ok(g.getGreenWidth(17.9)>g.getGreenWidth(18.6));assert.ok(g.getGreenWidth(18.6)>0);assert.ok(Math.abs(g.getGreenWidth(END))<.001)});
 test('Same terrain governs consistent break and deterministic physics',()=>{const g=boot().game,s=g.getState(),from={x:s.x,z:s.z},grad=g.getGradient(s.x,s.z);assert.ok(Number.isFinite(grad.x)&&Number.isFinite(grad.z));g.setBall(from.x,from.z,0,4);for(let i=0;i<120;i++)g.step(1/120);const a=g.getState();assert.ok(Math.abs(a.x-from.x)>.005);g.reset();g.setBall(from.x,from.z,0,4);for(let i=0;i<120;i++)g.step(1/120);const b=g.getState();assert.ok(Math.abs(a.x-b.x)<1e-10&&Math.abs(a.z-b.z)<1e-10)});
-test('Optional left bank gives consistent rebound',()=>{const g=boot().game,z=8,mid=.5*Math.sin(z*.25+.55)-.25*Math.sin(z*.49),x=mid-g.getGreenWidth(z)+.19;g.setBall(x,z,-2,.8);for(let i=0;i<28;i++)g.step(1/120);assert.ok(g.getState().vx>0)});
+test('Optional left bank gives consistent rebound',()=>{const g=boot().game,z=8,x=g.getGreenBounds(z).left+.19;g.setBall(x,z,-2,.8);for(let i=0;i<28;i++)g.step(1/120);assert.ok(g.getState().vx>0)});
 test('Touch pullback can putt backwards and reset restores play',()=>{const a=boot(),e=(x,y)=>({clientX:x,clientY:y,pointerId:1}),start=a.game.getState();a.events['glCanvas:pointerdown'](e(195,300));a.events['glCanvas:pointermove'](e(195,210));a.events['glCanvas:pointerup'](e(195,210));assert.equal(a.game.getState().shots,1);assert.equal(a.game.getState().moving,true);assert.ok(a.game.getState().vz<0);a.game.reset();assert.equal(a.game.getState().shots,0);assert.ok(Math.abs(a.game.getState().z-start.z)<1e-5)});
 test('Completion dialog shows earned score and replay restores ball',()=>{const a=boot(),g=a.game,c=g.getCup(),e=(x,y)=>({clientX:x,clientY:y,pointerId:1});a.events['glCanvas:pointerdown'](e(180,340));a.events['glCanvas:pointermove'](e(180,430));a.events['glCanvas:pointerup'](e(180,430));g.setBall(c.x+.02,c.z+.03,.2,.3);g.step(1/120);assert.equal(g.getState().holed,true);const timer=[...a.timers.values()].find(x=>x.ms===430);assert.ok(timer);timer.fn();assert.equal(a.elements.result.hidden,false);assert.equal(a.elements.resultName.textContent,'EAGLE');a.events['playAgain:click']();assert.equal(g.getState().shots,0);assert.equal(g.getState().holed,false);assert.equal(a.elements.result.hidden,true)});
 test('Roll It. brand, responsive controls and dialog preserved',()=>{assert.match(html,/>ROLL IT\.</);assert.match(html,/Drag and release in any direction/);assert.match(html,/role="dialog"/);assert.doesNotMatch(html,/ROLL IT SMOOTH/i)});
@@ -54,9 +54,9 @@ test('Hard direct pin contact rebounds without holing out while controlled pace 
  assert.equal(g.getState().holed,true,'controlled approach should drop');
 });
 test('Edges contain the ball and instructions plainly state green-only rule',()=>{
- const g=boot().game,z=8,mid=.5*Math.sin(z*.25+.55)-.25*Math.sin(z*.49);
- g.setBall(mid+g.getGreenWidth(z)+.7,z,4,0);g.step(1/120);
- assert.ok(g.getState().x<mid+g.getGreenWidth(z));
+ const g=boot().game,z=8,right=g.getGreenBounds(z).right;
+ g.setBall(right+.7,z,4,0);g.step(1/120);
+ assert.ok(g.getState().x<right);
  assert.ok(g.getState().vx<0);
  assert.match(html,/THE BALL ALWAYS STAYS ON THE GREEN/);
  assert.match(html,/GREEN-ONLY PLAY/);
@@ -86,7 +86,7 @@ test('Richer decorative scenery exists outside the playable corridor',()=>{
 
 test('GA-112 premium environment uploads a distinct pond mesh and retains the WebGL rendering path',()=>{
  const a=boot();
- assert.equal(a.game.getSceneVersion(),'GA-113 nine-hole round');
+ assert.equal(a.game.getSceneVersion(),'GA-114 unique hole routes');
  assert.ok(a.stats().bufferCount>=8,'terrain, grass, scenery, pond, flag and ball meshes should be uploaded');
  a.render();
  assert.ok(a.stats().drawCalls>=8);
@@ -94,14 +94,17 @@ test('GA-112 premium environment uploads a distinct pond mesh and retains the We
 });
 
 test('GA-112 bunker and pond landmarks stay outside the playable green along their full outlines',()=>{
- const g=boot().game,anchors=g.getLandscapeAnchors();
- assert.ok(anchors.bunker&&anchors.pond);
- const mid=z=>.5*Math.sin(z*.25+.55)-.25*Math.sin(z*.49);
- for(const anchor of Object.values(anchors)){
-  for(let i=-12;i<=12;i++){
-   const ratio=i/12,z=anchor.z+ratio*anchor.rz*1.28;
-   const x=anchor.x-anchor.rx*1.35*Math.sqrt(Math.max(0,1-ratio*ratio));
-   assert.ok(x>mid(z)+g.getGreenWidth(z)+.13,'landmark must never obscure playable surface');
+ const g=boot().game;
+ for(let hole=0;hole<9;hole++){
+  g.selectHole(hole);
+  const anchors=g.getLandscapeAnchors();
+  assert.ok(anchors.bunker&&anchors.pond);
+  for(const anchor of Object.values(anchors)){
+   for(let i=-12;i<=12;i++){
+    const ratio=i/12,z=anchor.z+ratio*anchor.rz*1.28;
+    const x=anchor.x-anchor.rx*1.35*Math.sqrt(Math.max(0,1-ratio*ratio));
+    assert.ok(x>g.getGreenBounds(z).right+.13,'landmark must never obscure playable surface on hole '+(hole+1));
+   }
   }
  }
 });
@@ -208,4 +211,41 @@ test('GA-113 par four birdie, running total and restart-round control',()=>{
  assert.equal(g.getHoleIndex(),0);
  assert.equal(g.getRound().completed,0);
  assert.equal(a.elements.scoreTotal.textContent,'0 PUTTS · E');
+});
+
+test('GA-114 all nine holes have independently shaped routes, not just different lengths or slope',()=>{
+ const a=boot(),g=a.game,signatures=new Set(),routeMaps=new Set(),routeTypes=new Set();
+ for(let i=0;i<9;i++){
+  assert.equal(g.selectHole(i),true);
+  const length=g.getGreenEnd(),samples=[.12,.25,.40,.55,.70,.82,.94].map(t=>{
+   const z=t*length,b=g.getGreenBounds(z);
+   assert.ok(b.left<b.right,'each green must remain open and playable');
+   return [g.getGreenCenter(z),(b.right-b.left)/2].map(n=>n.toFixed(2)).join(',');
+  }).join('|');
+  signatures.add(samples);
+  routeMaps.add(a.elements.routeMap.innerHTML);
+  routeTypes.add(a.elements.routeType.textContent);
+  assert.match(a.elements.routeMap.innerHTML,/<path d="M/);
+  const cup=g.getCup(),rim=g.getGreenBounds(cup.z);
+  assert.ok(cup.x>rim.left+.2&&cup.x<rim.right-.2,'cup must sit safely inside each different green');
+  const ball=g.getState(),tee=g.getGreenBounds(ball.z);
+  assert.ok(ball.x>tee.left&&ball.x<tee.right,'tee must start inside each green');
+ }
+ assert.equal(signatures.size,9,'nine routes need unique centerline/width signatures');
+ assert.equal(routeMaps.size,9,'route preview should match each geometry');
+ assert.equal(routeTypes.size,9,'all nine should have different route descriptions');
+});
+
+test('GA-114 green boundaries drive physics on both asymmetrical sides across all nine holes',()=>{
+ const g=boot().game;
+ for(let i=0;i<9;i++){
+  g.selectHole(i);
+  for(const t of [.18,.48,.75])for(const side of [-1,1]){
+   const z=t*g.getGreenEnd(),b=g.getGreenBounds(z),edge=side<0?b.left:b.right;
+   g.setBall(edge+side*.6,z,side*3,.1);g.step(1/120);
+   const state=g.getState(),inside=g.getGreenBounds(state.z);
+   assert.ok(state.x>inside.left-.001&&state.x<inside.right+.001,'ball must stay inside custom contour');
+   assert.ok(state.vx*side<0,'side boundary must rebound inward');
+  }
+ }
 });
